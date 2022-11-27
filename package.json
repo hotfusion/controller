@@ -10,7 +10,8 @@
     "fast-glob": "^3.2.12",
     "fs-extra": "^10.1.0",
     "webpack": "^5.75.0",
-    "eventemitter3": "^4.0.7"
+    "eventemitter3": "^4.0.7",
+    "terser-webpack-plugin": "^5.3.6"
   },
   "scripts": {
     "controller": "node ./dist/index.js"
