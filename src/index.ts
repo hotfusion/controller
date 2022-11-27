@@ -7,7 +7,9 @@ let cdns = {
     vue    : new CDN('@vue','https://unpkg.com/vue@3'),
     moment : new CDN('@moment','https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js')
 }
+
 host.use(cdns.vue.use);
+host.use(cdns.moment.use);
 
 host.use((socket,next) => {
     next()

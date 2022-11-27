@@ -1,17 +1,18 @@
 const download = require('node-downloader-helper').DownloaderHelper, fs = require('fs');
 export class CDN {
-    #alias
-    #link
+    readonly #alias
+    readonly #link
     #content
     constructor(alias,link) {
         this.#alias = alias;
         this.#link  = link;
 
-        this.start().then(x => {
+        this.use = this.use.bind(this);
+        this.save().then(() => {
 
-        })
+        });
     }
-    #download = (url, path):Promise<object> => {
+    #download = (url, path):Promise <object> => {
         return new Promise((x,f) => {
             let dl = new download(url,path,{override:true})
                 dl.on('end', x);
@@ -19,7 +20,7 @@ export class CDN {
                 dl.start().catch(f);
         });
     }
-    async start() {
+    async save() {
         let file = null,is = false;
         do {
             if(is) return ; is = true;
@@ -27,10 +28,12 @@ export class CDN {
             file = await this.#download(this.#link, __dirname);
             this.#content = fs.readFileSync(file.filePath).toString()
             fs.unlinkSync(file.filePath);
+
         } while (!file);
+        return this;
     }
     use(request,respond,next){
-        if(request.url.split('@')[1] === this.#alias)
+        if('@' + request.url.split('@')[1] === this.#alias)
             return respond.send(this.#content);
 
         next();
