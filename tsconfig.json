@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2018",
+    "moduleResolution": "node",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "skipLibCheck": true,
+    "noEmitHelpers": false,
+    "importHelpers": false,
+    "declaration": false,
+    "skipDefaultLibCheck": true,
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "exclude": []
+}
