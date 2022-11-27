@@ -8,10 +8,11 @@
     "skipLibCheck": true,
     "noEmitHelpers": false,
     "importHelpers": false,
-    "declaration": false,
+    "declaration": true,
+    "declarationDir": "./dist/types",
     "skipDefaultLibCheck": true,
     "rootDir": "./src",
     "outDir": "./dist"
   },
-  "exclude": []
+  "exclude": ["./www"]
 }
