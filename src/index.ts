@@ -49,8 +49,8 @@ host.on('exception', (exception) => {
 });
 
 host.on('mounted' , () => {
-    new Client().on('handshake', (GM) => {
-        console.log('client connected')
+    new Client().on('handshake', (event) => {
+        console.log('client connected',event)
     }).on('exception',(event) => {
         console.log('exception',event)
     }).connect(5500)

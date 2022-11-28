@@ -10,12 +10,13 @@ export class Client extends EventEmitter {
         let spinner = (<any>console).spinner(`client trying to connect to: http://localhost:${port}`,'connecting')
 
         this.#connection = io(`http://localhost:${port}`,{
-            timeout:5000,
-            reconnection:false
+            timeout      : 5000,
+            reconnection : false
         });
+
         this.#connection.on('handshake', (event) => {
                 spinner.stop()
-                this.emit('handshake', event || {});
+                this.emit('handshake', Object.assign(event || {},{connection:this.#connection}));
             }
         );
 
