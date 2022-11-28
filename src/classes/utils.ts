@@ -1,4 +1,4 @@
-export class Utils  {
+export class utils  {
     static $toLinuxPath(_path){
         return _path.replace(/\\/gi,'/');
     }

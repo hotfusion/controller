@@ -1,4 +1,4 @@
-import {Utils} from "./classes/Utils";
+import {utils} from "./classes/utils";
 
 const path = require('path'), TerserPlugin = require('terser-webpack-plugin'), webpack = require('webpack'), fs = require('fs');
 const resolves = [
@@ -6,7 +6,7 @@ const resolves = [
 ];
 
 export const Webpack = function({entry,output}){
-    let filename = Utils.$objectId() + '.js';
+    let filename = utils.$objectId() + '.js';
     let config =  {
         mode   : "development",
         entry  : entry,

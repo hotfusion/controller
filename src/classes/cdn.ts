@@ -7,7 +7,7 @@ export class CDN {
         this.#alias = alias;
         this.#link  = link;
         this.use = this.use.bind(this);
-        (<any>this.use).install = () => this.save()
+        (<any>this.use).install =  this.save.bind(this)
     }
     #download = (url, path):Promise <object> => {
         return new Promise((x,f) => {
@@ -19,24 +19,24 @@ export class CDN {
     }
     async save() {
         let isDone = null,is = false;
-        do {
-            if(is) return ; is = true;
+        let spinner = (<any>console)
+            .spinner(`downloading cdn package: ${this.#link}`);
 
-            console
-                .log(`downloading cdn package: ${this.#link}`);
+        let _file : any
+            = await this.#download(this.#link, __dirname);
 
-            let _file : any
-                = await this.#download(this.#link, __dirname);
 
-            console
-                .log(`downloading is completed: ${this.#link}`);
+        spinner.stop(true);
+        await new Promise(x => {
+            setTimeout(x,500 )
+        });
+        (<any>console)
+            .info(`downloading is completed:`, this.#link);
 
-            this.#content
-                = fs.readFileSync(_file.filePath).toString();
+        this.#content
+            = fs.readFileSync(_file.filePath).toString();
 
-            fs.unlinkSync(_file.filePath);
-            isDone = true;
-        } while (!isDone);
+        fs.unlinkSync(_file.filePath);
 
         return this;
     }
