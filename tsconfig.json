@@ -11,6 +11,7 @@
     "declaration": true,
     "declarationDir": "./dist/types",
     "skipDefaultLibCheck": true,
+    "pretty": true,
     "rootDir": "./src",
     "outDir": "./dist"
   },

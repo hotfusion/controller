@@ -1,18 +1,21 @@
+import {Utils} from "./classes/Utils";
+
 const path = require('path'), TerserPlugin = require('terser-webpack-plugin'), webpack = require('webpack'), fs = require('fs');
 const resolves = [
     path.resolve(__dirname, '../node_modules')
 ];
 
-export const config = function({entry,output}){
-    return {
+export const Webpack = function({entry,output}){
+    let filename = Utils.$objectId() + '.js';
+    let config =  {
         mode   : "development",
         entry  : entry,
         target : ['web','es5'],
         cache  : false,
         output : {
-            path : output.path,
-            filename: output.filename,
-            library    : {
+            path : __dirname,
+            filename  : filename,
+            library   : {
                 type  : "umd",
                 name  : "HF"
             }
@@ -33,7 +36,7 @@ export const config = function({entry,output}){
                 use    : {
                     loader : 'babel-loader',
                     options: {
-                        compact: true
+                        compact : true
                     }
                 }
             }, {
@@ -53,5 +56,40 @@ export const config = function({entry,output}){
                 }]
             }]
         }
-    }
+    };
+
+    return new Promise((x,f) => {
+        webpack(config,async (err:any,stats) => {
+            if (err || stats.hasErrors()) {
+                console.log(config)
+                if (err) {
+                    console.error(err.stack || err);
+                    if (err.details)
+                        return f(err.details);
+                    return;
+                }
+
+                const info = stats.toJson();
+
+                if (stats.hasErrors())
+                    f(info.errors);
+
+                if (stats.hasWarnings())
+                    console.warn(info.warnings);
+
+            }else {
+                let filePath = path.resolve(__dirname,`./${filename}`);
+
+                let lastModified = fs.statSync(filePath).mtimeMs;
+                let content = fs.readFileSync(filePath).toString();
+                    fs.unlinkSync(filePath);
+
+                x({
+                    entry        : entry,
+                    content      : content,
+                    lastModified : lastModified
+                });
+            }
+        })
+    })
 }

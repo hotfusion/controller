@@ -1,22 +1,32 @@
+require( 'console-stamp' )( console , {
+    format : ':date(HH:MM:ss.l).grey :label().blue :msg().green',
+    tokens :{
+        label: (a) => {
+            return `[${a.method}]`;
+        }
+    }
+} );
+
 const express    = require('express');
 const client     = require('socket.io-client')
 const path       = require('path');
 const http       = require('http');
 const https      = require('https');
-const download   = require('node-downloader-helper').DownloaderHelper;
 const fs         = require('fs-extra');
 const fg         = require('fast-glob');
-const webpack    = require("webpack");
+
 
 import * as EventEmitter from 'eventemitter3';
 import {Server} from "socket.io";
 import {IO}     from "./io";
+import {Utils} from "./Utils";
 
 export class Host extends EventEmitter {
     readonly #express
     readonly #ssl
     readonly #http
     readonly #io
+    readonly #middles:{callback: IEvent | string, dir?:string | Function, install:Function}[] = []
     readonly #getArguments = (V) => V.toString().match(/\((.*)\)/)[0].split(',')
     constructor() {
         super();
@@ -56,19 +66,12 @@ export class Host extends EventEmitter {
             async (error) => this.emit('exception',error)
         );
     }
-    start(port:number){
-        // start the HTTP server
-        setTimeout(() =>
-            this.#http.listen(port,
-                () => this.emit('mounted',this)
-            ), 1000);
-    }
 
     /**
      * extends express method use
      *
-     * @param Event | string
-     * @param dir   | string
+     * @param callback string | Function
+     * @param dir string | Function
      *
      * @description
      *   if IEvent typeof is string, we assume its a static folder, for example:
@@ -85,41 +88,81 @@ export class Host extends EventEmitter {
      *           next();
      *       });
      */
-    use(Event: IEvent | string, dir?:string | Function) {
-        // if string we assume its a static path
-        if(typeof Event === 'string')
-            if(dir)
-                return this.#express.use(Event, express.static(dir));
-            else
-                return this.#express.use(express.static(Event));
+    use(callback: IEvent | string, dir?:string | Function) {
+        this.#middles.push({
+            callback  : callback,
+            dir       : dir,
+            install   : function (callback,dir) {
+                // if string we assume its a static path
+                if(typeof callback === 'string')
+                    if(dir) {
+                        console.info(`host watching path: ${
+                            Utils.$toLinuxPath(path.resolve(dir,'.' + callback))
+                        }`)
+                        return this.#express.use(callback, express.static(dir));
+                    }else
+                        return this.#express.use(express.static(callback));
 
-        // for socket use the arguments length should be 2
-        let isSocket = this.#getArguments(Event).length === 2;
-        if(isSocket)
-            this.#io.use(Event)
-        else
-            this.#express.use(Event);
+                // for socket use the arguments length should be 2
+                let isSocket = this.#getArguments(Event).length === 2;
 
+                if(isSocket)
+                    this.#io.use(callback)
+                else
+                    this.#express.use(callback);
+            }.bind(this)
+        });
         return this;
     }
 
-    transformer(source,transformer){
-        let files:any[] = fg.sync( source.slice(source.indexOf('*'),source.length).replace(/\\/gi,'/'), { dot: true, cwd : source.split('*')[0] }).reduce((o,k,i) => {
-            o[k] = {
-                dir      : source.split('*')[0].replace(/\\/gi,'/'),
-                relative : './' + k,
-                path     : path.resolve(source.split('*')[0],'./' + k).replace(/\\/gi,'/'),
-                content  : fs.readFileSync(path.resolve(source.split('*')[0],'./' + k)).toString()
-            }
-            return o
-        },{});
+    transformer(source:string,transformer:Function){
+        this.#middles.push(<any>{
+            callback: transformer,
+            dir     : source,
+            install : async (transformer, source) => {
+                let files:any[] = fg.sync( Utils.$toLinuxPath(source.slice(source.indexOf('*'),source.length)), { dot: true, cwd : source.split('*')[0] }).reduce((o,k,i) => {
+                    o[k] = {
+                        dir      : source.split('*')[0].replace(/\\/gi,'/'),
+                        relative : './' + k,
+                        path     : path.resolve(source.split('*')[0],'./' + k).replace(/\\/gi,'/'),
+                        content  : fs.readFileSync(path.resolve(source.split('*')[0],'./' + k)).toString()
+                    }
+                    return o
+                },{});
 
-        return Object.keys(files).forEach(async name => {
-            files[name] = await transformer(files[name]);
-            this.#express.use( '/' + name, (req,res,next) => {
-                res.send(files[name].content);
-            });
+                for(let i = 0 ; i < Object.keys(files).length; i++){
+                    let name = Object.keys(files)[i];
+
+                    console
+                        .info(`transforming file: ${name}`);
+
+                    files[name] = await transformer(files[name]);
+                    this.#express.use( '/' + name, (req,res,next) => {
+                        res.send(files[name].content);
+                    });
+
+                    console
+                        .info(`transformed successfully: ${name}`)
+                }
+            }
         })
+        return this;
+    }
+
+    async start(port:number){
+        // start the HTTP server
+        let middles = this.#middles;
+        for(let i = 0; i < middles.length; i++){
+            let {callback,dir,install} = middles[i];
+
+            await (<any>callback)?.install?.();
+            await install(callback,dir);
+        }
+        this.#http.listen(port,
+            () => this.emit('mounted', this)
+        )
     }
 }
+
+
 
