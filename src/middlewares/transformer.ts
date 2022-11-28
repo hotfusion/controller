@@ -20,6 +20,10 @@ export class Transformer extends MiddlewareFactory implements MiddleWareInterfac
         },{});
     }
     use(request, respond, next) {
+        let name = request.url.split('?').shift().replace('/','');
+        if(this.#files[name])
+            return respond.send(this.#files[name].content);
+
         next()
         return this;
     }
@@ -36,12 +40,10 @@ export class Transformer extends MiddlewareFactory implements MiddleWareInterfac
                 .spinner(`transforming file: /${name}`,'compiling');
 
             this.#files[name] = await this.#transformer(this.#files[name]);
-            /*this.#express.use( '/' + name, (req,res,next) => {
-                res.send(files[name].content);
-            });*/
-            spinner.stop(true);
+
+            spinner.stop();
             (<any>console)
-                .info(`transformed successfully: [./${name}]`)
+                .info(`transformed successfully: [./${name}]`);
         }
         return this;
     }

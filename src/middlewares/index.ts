@@ -1,10 +1,15 @@
 export default class MiddlewareFactory implements MiddleWareInterface{
     constructor() {
+        let isSocket = this.#getArguments(this.use).length===2
         this.use = this.use.bind(this);
+        (<any>this.use).type = isSocket?'socket':'type';
+
+
         (<any>this.use).install = this.install.bind(this);
         (<any>this.use).handshake = this.handshake.bind(this);
         (<any>this.use).className = this.constructor.name;
     }
+    readonly #getArguments = (V) => V.toString().match(/\((.*)\)/)[0].split(',')
     async install() {
         return this;
     }

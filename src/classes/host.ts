@@ -106,12 +106,10 @@ export class Host extends EventEmitter {
                         return this.#express.use(express.static(callback));
 
                 // for socket use the arguments length should be 2
-                let isSocket = this.#getArguments(callback).length === 2;
+                if(callback.type === 'socket' || this.#getArguments(callback).length === 2)
+                    return this.#io.use(callback)
 
-                if(isSocket)
-                    this.#io.use(callback)
-                else
-                    this.#express.use(callback);
+                this.#express.use(callback);
             }.bind(this)
         });
         return this;

@@ -18,7 +18,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
     }
     use(socket,next){
         for(let i = 0; i < this.#files.length; i++){
-            let file = this.#files;
+            let file = this.#files[i];
             let {_types,_public, _packages,_alias} = file.module.prototype;
 
             _packages = _packages || [];
