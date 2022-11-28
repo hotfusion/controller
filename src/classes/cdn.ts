@@ -13,7 +13,7 @@ export class CDN {
 
              await this.save()
 
-             spinner.stop(true);
+             spinner.stop(1);
 
              (<any>console)
                 .info(`downloading is completed:`, this.#link);

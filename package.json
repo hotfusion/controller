@@ -20,7 +20,9 @@
     "cli-spinner": "^0.2.10",
     "chalk": "4.1.2",
     "moment": "^2.29.4",
-    "terminal-link": "^2.1.1"
+    "@babel/parser": "^7.20.3",
+    "@babel/traverse": "^7.20.1",
+    "prettyjson": "^1.2.5"
   },
   "scripts": {
     "controller": "node ./dist/index.js"

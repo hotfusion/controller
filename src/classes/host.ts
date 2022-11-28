@@ -1,4 +1,4 @@
-
+import * as chalk from "chalk";
 
 const express    = require('express');
 const client     = require('socket.io-client')
@@ -92,7 +92,7 @@ export class Host extends EventEmitter {
                 // if string we assume its a static path
                 if(typeof callback === 'string')
                     if(dir) {
-                        (<any>console).info(`host watching path:`,utils.$toLinuxPath(path.resolve(dir,'.' + callback)))
+                        (<any>console).info(`host watching path: [${utils.$toLinuxPath(path.resolve(dir,'.' + callback))}]`)
                         return this.#express.use(callback, express.static(dir));
                     }else
                         return this.#express.use(express.static(callback));
@@ -136,7 +136,7 @@ export class Host extends EventEmitter {
                     });
                     spinner.stop(true);
                     (<any>console)
-                        .info(`transformed successfully:`, '/' + name)
+                        .info(`transformed successfully: [./${name}]`)
                 }
             }
         })
@@ -153,7 +153,7 @@ export class Host extends EventEmitter {
         }
         this.#http.listen(port, () => {
             this.emit('mounted', this);
-            console.info('server is running at:', port)
+            console.info(chalk.greenBright('server is running at:'), port)
         })
     }
 }

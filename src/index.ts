@@ -1,13 +1,18 @@
-import { Host, CDN, Client } from "./classes";
+import { Host, CDN, Client, Controller } from "./classes";
 import { resolve } from "path";
 import { Webpack } from "./webpack";
 
+let cwd : string = resolve(__dirname,'../www')
+let controller = new Controller({
+    source : resolve(__dirname,'../www/**/*.controller.ts')
+})
 let host = new Host();
 let cdns = {
     vue    : new CDN('@vue','https://unpkg.com/vue@3'),
     moment : new CDN('@moment','https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js')
 }
 
+host.use(controller.use)
 host.use(cdns.vue.use);
 host.use(cdns.moment.use);
 
@@ -41,7 +46,7 @@ host.on('mounted' , () => {
 });
 
 host.use('/',
-    resolve(__dirname,'../www')
+    cwd
 );
 
 host.start(5500);
