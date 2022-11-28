@@ -47,10 +47,16 @@ export class Host extends EventEmitter {
         // when a new connection established
         this.#io .on('connection',(socket) => {
             this.emit('client',{
-                complete  : (e) => socket.emit('handshake', e || {}),
+                connect   : (e) => {
+                    let segments = this.#middles.filter((x:any) => typeof x?.callback?.handshake === 'function').map((x:any) => {
+                        return {
+                             [x.callback.className]:x?.callback?.handshake?.(socket) || {}
+                         }
+                    })
+                    socket.emit('handshake', Object.assign(e || {},{segments:segments}))
+                },
                 exception : (e) => socket.emit('exception', e)
             })
-
         });
 
         // host Events
@@ -100,7 +106,7 @@ export class Host extends EventEmitter {
                         return this.#express.use(express.static(callback));
 
                 // for socket use the arguments length should be 2
-                let isSocket = this.#getArguments(Event).length === 2;
+                let isSocket = this.#getArguments(callback).length === 2;
 
                 if(isSocket)
                     this.#io.use(callback)
@@ -155,13 +161,12 @@ export class Host extends EventEmitter {
         let middles = this.#middles;
         for(let i = 0; i < middles.length; i++){
             let {callback,dir,install} = middles[i];
-
             await (<any>callback)?.install?.();
             await install(callback,dir);
         }
         this.#http.listen(port, () => {
+            console.info(chalk.greenBright('server is running at:'), port);
             this.emit('mounted', this);
-            console.info(chalk.greenBright('server is running at:'), port)
         })
     }
 }

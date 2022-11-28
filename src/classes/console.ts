@@ -1,13 +1,16 @@
 import stamp from 'console-stamp';
-import {Spinner} from 'cli-spinner'
 import * as moment from "moment";
 
 const chalk = require("chalk");
 
-const prettyjson = require('prettyjson');
+const readline = require('readline');
 
-
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
 export class Console {
+    pattern = '⢹⢺⢼⣸⣇⡧⡗⡏'
     constructor() {
         stamp( console , {
             format : ':date(HH:MM:ss.l).grey :label().blue :msg()',
@@ -24,15 +27,11 @@ export class Console {
         } );
 
         (<any>console).spinner = this.spinner.bind(this);
-        (<any>console).json = this.json.bind(this);
-    }
-    json(json){
-        console.log('--' + prettyjson.render(json));
     }
     parse(msg) {
         return msg.split(' ')
             // find links
-            .map(x => x.split('/')[1] ? x.startsWith('[')?chalk.grey(x):chalk.blue(x):x)
+            .map(x => x.split('/')[1] ? x.startsWith('[')?chalk.bold.grey(x):chalk.blue(x):x)
             // find number
             .map(x => !isNaN(x.trim())?chalk.blueBright(x):x)
             .join(' ')
@@ -41,11 +40,14 @@ export class Console {
         return ['[',moment(new Date()).format('HH:MM:ss.SSS'),']'].join('')
     }
     spinner(message,label = 'downloading'){
-        let spinner = new Spinner({
-            text : [chalk.gray(this.time()), chalk.yellow(`[${label}]`), this.parse(message)].join(' ')
-        });
-        spinner.setSpinnerString('⢹⢺⢼⣸⣇⡧⡗⡏');
-        spinner.start();
-        return spinner
+        let msg = this.parse(message);
+        console.info(msg)
+        return {
+            stop(){
+                readline.moveCursor(process.stdout,0, -1)      // moving two lines up
+                readline.cursorTo(process.stdout,0)            // then getting cursor at the begining of the line
+                readline.clearScreenDown(process.stdout)
+            }
+        }
     }
 }

@@ -1,7 +1,6 @@
 import { Host, CDN, Client, Controller } from "./classes";
 import { resolve } from "path";
 import { Webpack } from "./webpack";
-
 let cwd : string = resolve(__dirname,'../www')
 let controller = new Controller({
     source : resolve(__dirname,'../www/**/*.controller.ts')
@@ -31,15 +30,17 @@ host.transformer(resolve(__dirname,'../www/**/*.s.ts'),async (File) => {
     return File;
 });
 
-host.on('client', ({complete,exception}) => {
-    console.log('client wants connected')
-    complete('not allow')
+host.on('client', ({connect,exception}) => {
+   // console.log('client wants connected')
+    connect({})
 });
 
+host.on('exception', (exception) => {
+    console.error(exception)
+})
 host.on('mounted' , () => {
-
-    new Client().on('handshake', () => {
-        console.log('client connected')
+    new Client().on('handshake', (GM) => {
+        console.log('client connected',GM)
     }).on('exception',(event) => {
         console.log('exception',event)
     }).connect(5500)

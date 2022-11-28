@@ -1,4 +1,4 @@
 export {Client} from './client';
-export {CDN} from './cdn'
+export {CDN} from '../middlewares/cdn'
 export {Host} from './host'
-export {Controller} from './controller'
+export {Controller} from '../middlewares/controller'

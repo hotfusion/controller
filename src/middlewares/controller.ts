@@ -3,17 +3,18 @@ import traverse from "@babel/traverse";
 import * as glob from 'fast-glob'
 import * as path from "path";
 import * as fs from "fs";
-import {utils} from "./utils";
+import {utils} from "../classes/utils";
+import MiddlewareFactory from "./index";
 
 const chalk = require('chalk');
-export class Controller implements MiddleWareInterface {
+export class Controller extends MiddlewareFactory implements MiddleWareInterface {
     #files
     #source
     #cwd
     constructor({source}) {
+        super()
         this.#cwd = source.split('*')[0];
         this.#source = utils.$toLinuxPath(source.slice(source.indexOf('*'),source.length));
-        (<any>this.use).install = this.install.bind(this);
     }
     use(socket,next){
         for(let i = 0; i < this.#files.length; i++){
@@ -53,7 +54,6 @@ export class Controller implements MiddleWareInterface {
                             let values = Object.values(object);
 
                             let key = _packages.find(x => x === name);
-                            console.log(key,values)
                             if(key)
                                 return complete(
                                     await controller[name][key].apply(
@@ -74,9 +74,8 @@ export class Controller implements MiddleWareInterface {
 
             });
         }
-
-
         next();
+        return this;
     }
     install (){
         this.#files = glob.sync([this.#source,'!node_modules'], { dot: true,cwd:this.#cwd }).map(x => path.resolve(this.#cwd,x));
@@ -143,5 +142,11 @@ export class Controller implements MiddleWareInterface {
                 path    : x
             }
         });
+        return this;
+    }
+    handshake(socket) {
+        return {
+            s : ''
+        }
     }
 }

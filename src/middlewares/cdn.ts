@@ -1,13 +1,14 @@
 const download = require('node-downloader-helper').DownloaderHelper, fs = require('fs');
-export class CDN implements MiddleWareInterface {
+import MiddlewareFactory from "./index";
+export class CDN  extends MiddlewareFactory implements MiddleWareInterface {
     readonly #alias
     readonly #link
     #content
     constructor(alias,link) {
+        super()
         this.#alias = alias;
         this.#link  = link;
-        this.use = this.use.bind(this);
-        (<any>this.use).install = this.install.bind(this);
+
     }
     #download = (url, path):Promise <object> => {
         return new Promise((x,f) => {
@@ -27,14 +28,6 @@ export class CDN implements MiddleWareInterface {
         let spinner = (<any>console)
             .spinner(`downloading cdn package: ${this.#link}`);
 
-        await this.save()
-
-        spinner.stop(1);
-
-        (<any>console)
-            .info(`downloading is completed:`, this.#link);
-    }
-    async save() {
         let _file : any
             = await this.#download(this.#link, __dirname);
 
@@ -43,6 +36,17 @@ export class CDN implements MiddleWareInterface {
 
         fs.unlinkSync(_file.filePath);
 
+        spinner
+            .stop();
+
+        (<any>console)
+            .info(`downloading is completed:`, this.#link);
+
         return this;
+    }
+    handshake(socket) {
+        return {
+
+        }
     }
 }
