@@ -1,4 +1,6 @@
 declare type IEvent = (request,respond, next:Function) => void
-declare const console = {
-    spinner : any
+
+declare interface MiddleWareInterface {
+    use(request,respond,next)
+    install()
 }

@@ -6,81 +6,14 @@ import * as fs from "fs";
 import {utils} from "./utils";
 
 const chalk = require('chalk');
-export class Controller {
+export class Controller implements MiddleWareInterface {
     #files
+    #source
+    #cwd
     constructor({source}) {
-        let cwd = source.split('*')[0];
-        source = utils.$toLinuxPath(source.slice(source.indexOf('*'),source.length));
-        (<any>this.use).install = () => {
-            this.#files = glob.sync([source,'!node_modules'], { dot: true,cwd:cwd }).map(x => path.resolve(cwd,x));
-
-            this.#files = this.#files.map(x => {
-                let module = require(x.replace('.ts','.js')).default
-                let methods = {}
-                let code    = fs.readFileSync(x).toString();
-                let ast     = parser.parse(code,{
-                    allowImportExportEverywhere:true,
-                    plugins: ["decorators","typescript"]
-                });
-
-                traverse(ast, {
-                    Function(f){
-
-                        let decNames = f.parentPath.parent.decorators?.map?.(x => x.expression.callee.property.name) || []
-                        let parent   = f.parentPath, _path = []
-
-                        while(true){
-                            if(!parent)
-                                break;
-
-                            if(parent.parent?.key?.name) _path.unshift(parent.parent?.key?.name);
-                            if(parent.parent?.id?.name)  _path.unshift(parent.parent?.id?.name);
-
-                            parent = parent.parentPath
-                        }
-
-                        _path.push(f.node.key.name)
-
-                        let types = f.node.params.map(P => {
-                            let meta = {
-                                params : []
-                            }
-                            if(P.left && P.right){
-                                let A = P?.left?.typeAnnotation?.typeAnnotation;
-                                meta.params.push({
-                                    name    : P?.left?.name,
-                                    default : P?.right?.value,
-                                    types   : (A?.types?.map?.(x => x?.elementType?.type || x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
-                                })
-                            }
-                            if(P.typeAnnotation){
-                                let A = P.typeAnnotation?.typeAnnotation
-                                meta.params.push({
-                                    name    : P?.name,
-                                    default : P?.right?.value,
-                                    types   : (A?.types?.map?.(x => x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
-                                })
-                            }
-                            return meta.params;
-                        });
-
-                        methods[_path.join('.')] = types.flat();
-                    }
-                });
-
-                console
-                    .info(`${chalk.magenta('controller:')} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
-
-
-                //(<any>console).json(methods);
-
-                return {
-                    methods : methods,
-                    module  : module,
-                    path    : x
-                }
-            });
-        }
+        this.#cwd = source.split('*')[0];
+        this.#source = utils.$toLinuxPath(source.slice(source.indexOf('*'),source.length));
+        (<any>this.use).install = this.install.bind(this);
     }
     use(socket,next){
         for(let i = 0; i < this.#files.length; i++){
@@ -144,5 +77,71 @@ export class Controller {
 
 
         next();
+    }
+    install (){
+        this.#files = glob.sync([this.#source,'!node_modules'], { dot: true,cwd:this.#cwd }).map(x => path.resolve(this.#cwd,x));
+        this.#files = this.#files.map(x => {
+            let module = require(x.replace('.ts','.js')).default
+            let methods = {}
+            let code    = fs.readFileSync(x).toString();
+            let ast     = parser.parse(code,{
+                allowImportExportEverywhere:true,
+                plugins: ["decorators","typescript"]
+            });
+
+            traverse(ast, {
+                Function(f){
+
+                    let decNames = f.parentPath.parent.decorators?.map?.(x => x.expression.callee.property.name) || []
+                    let parent   = f.parentPath, _path = []
+
+                    while(true){
+                        if(!parent)
+                            break;
+
+                        if(parent.parent?.key?.name) _path.unshift(parent.parent?.key?.name);
+                        if(parent.parent?.id?.name)  _path.unshift(parent.parent?.id?.name);
+
+                        parent = parent.parentPath
+                    }
+
+                    _path.push(f.node.key.name)
+
+                    let types = f.node.params.map(P => {
+                        let meta = {
+                            params : []
+                        }
+                        if(P.left && P.right){
+                            let A = P?.left?.typeAnnotation?.typeAnnotation;
+                            meta.params.push({
+                                name    : P?.left?.name,
+                                default : P?.right?.value,
+                                types   : (A?.types?.map?.(x => x?.elementType?.type || x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
+                            })
+                        }
+                        if(P.typeAnnotation){
+                            let A = P.typeAnnotation?.typeAnnotation
+                            meta.params.push({
+                                name    : P?.name,
+                                default : P?.right?.value,
+                                types   : (A?.types?.map?.(x => x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
+                            })
+                        }
+                        return meta.params;
+                    });
+
+                    methods[_path.join('.')] = types.flat();
+                }
+            });
+
+            console
+                .info(`${chalk.magenta('controller:')} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
+
+            return {
+                methods : methods,
+                module  : module,
+                path    : x
+            }
+        });
     }
 }

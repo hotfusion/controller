@@ -64,23 +64,25 @@ export class Host extends EventEmitter {
     }
 
     /**
-     * extends express method use
-     *
+     * @name use
      * @param callback string | Function
      * @param dir string | Function
      *
      * @description
-     *   if IEvent typeof is string, we assume its a static folder, for example:
-     *       host.use('/account',resolve(__dirname,'../www'));
+     *   middleware method [use] is dynamic middleware and can react differently base on arguments type:
      *
+     *   if callback typeof === string, we assume its a static folder, for example:
+     *       host.use('/',resolve(__dirname,'../www'));
+     *       or
+     *       host.use(resolve(__dirname,'../www'));
      *
-     *   if IEvent is a string and arguments length is 2, use socket
+     *   if callback typeof ===  function with arguments length of 2, use socket
      *       host.use((socket,next) => {
      *           next();
      *       });
      *
-     *   if IEvent is a string and arguments length is 3, use express
-     *       host.use(function(req,res,next) {
+     *   if callback typeof ===  function with arguments length of 3, use express
+     *       host.use((req,res,next) => {
      *           next();
      *       });
      */
@@ -109,8 +111,14 @@ export class Host extends EventEmitter {
         return this;
     }
 
+    /**
+     * @name transformer
+     * @param source
+     * @param transformer
+     *
+     */
     transformer(source:string,transformer:Function){
-        this.#middles.push(<any>{
+        this.#middles.push(<any> {
             callback: transformer,
             dir     : source,
             install : async (transformer, source) => {
