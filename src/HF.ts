@@ -3,15 +3,15 @@ declare class Interface {
     static public(target,name): any
 }
 
-export class HF implements Interface{
-    static type(target,name){
-        if(!target._types)
-            target._types = [];
+export const type = (target,name) => {
+    if(!target._types)
+        target._types = [];
 
-        target._types.push(name);
-        return target;
-    }
+    target._types.push(name);
+    return target;
+}
 
+export default class HF implements Interface {
     static public (target?:any,name?:string){
         if(name) {
 

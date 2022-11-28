@@ -2,7 +2,7 @@ export default class MiddlewareFactory implements MiddleWareInterface{
     constructor() {
         let isSocket = this.#getArguments(this.use).length===2
         this.use = this.use.bind(this);
-        (<any>this.use).type = isSocket?'socket':'type';
+        (<any>this.use).type = isSocket?'socket':'http';
 
 
         (<any>this.use).install = this.install.bind(this);

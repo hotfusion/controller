@@ -1,8 +1,7 @@
 import { Host, Client } from "./classes";
-import {Transformer,CDN,Controller} from "./middlewares";
+import { Transformer, CDN, Controller } from "./middlewares";
 import { resolve } from "path";
 import { Webpack } from "./webpack";
-
 
 let cwd : string = resolve(__dirname,'../www');
 
@@ -39,7 +38,6 @@ host.use(controller.use)
         next();
     });
 
-
 host.on('client', ({connect,exception}) => {
     connect({})
 });
@@ -50,15 +48,13 @@ host.on('exception', (exception) => {
 
 host.on('mounted' , () => {
     new Client().on('handshake', (event) => {
-        console.log('client connected',event)
+        console.log('client connected')
     }).on('exception',(event) => {
         console.log('exception',event)
     }).connect(5500)
 });
 
-host.use('/',
-    cwd
-);
+host.use('/', cwd);
 
 host.start(5500);
 

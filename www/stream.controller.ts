@@ -1,10 +1,12 @@
-import {HF} from "../src/HF";
+import HF, {type} from "../src/HF";
 
 class Types {
-    @HF.type string(Value){
+    @type string(Value){
 
     }
 }
-export default class StreamController {
-
+export default class StreamController extends Types{
+    /*@HF.public create = (name:string) => {
+        return
+    }*/
 }

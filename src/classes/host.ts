@@ -96,6 +96,7 @@ export class Host extends EventEmitter {
         this.#middles.push({
             callback  : callback,
             dir       : dir
+
         });
         return this;
     }
@@ -119,7 +120,7 @@ export class Host extends EventEmitter {
                 if ((<any>callback).type === 'socket' || this.#getArguments(callback).length === 2)
                     this.#io.use(callback);
 
-                if ((<any>callback).type !== 'socket' || this.#getArguments(callback).length === 3)
+                if ((<any>callback).type === 'http' || this.#getArguments(callback).length === 3)
                     this.#express.use(callback);
             }
         }
