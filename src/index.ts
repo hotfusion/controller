@@ -31,8 +31,7 @@ host.on('client', ({complete,exception}) => {
     complete('not allow')
 });
 
-host.on('mounted' , ()=> {
-
+host.on('mounted' , () => {
 
     new Client().on('handshake', () => {
         console.log('client connected')
