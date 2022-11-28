@@ -117,45 +117,7 @@ export class Host extends EventEmitter {
         return this;
     }
 
-    /**
-     * @name transformer
-     * @param source
-     * @param transformer
-     *
-     */
-    transformer(source:string,transformer:Function){
-        this.#middles.push(<any> {
-            callback: transformer,
-            dir     : source,
-            install : async (transformer, source) => {
-                let files:any[] = fg.sync(utils.$toLinuxPath(source.slice(source.indexOf('*'),source.length)), { dot: true, cwd : source.split('*')[0] }).reduce((o,k,i) => {
-                    o[k] = {
-                        dir      : source.split('*')[0].replace(/\\/gi,'/'),
-                        relative : './' + k,
-                        path     : path.resolve(source.split('*')[0],'./' + k).replace(/\\/gi,'/'),
-                        content  : fs.readFileSync(path.resolve(source.split('*')[0],'./' + k)).toString()
-                    }
-                    return o
-                },{});
 
-                for(let i = 0 ; i < Object.keys(files).length; i++){
-                    let name = Object.keys(files)[i];
-
-                    let spinner = (<any>console)
-                        .spinner(`transforming file: /${name}`,'compiling');
-
-                    files[name] = await transformer(files[name]);
-                    this.#express.use( '/' + name, (req,res,next) => {
-                        res.send(files[name].content);
-                    });
-                    spinner.stop(true);
-                    (<any>console)
-                        .info(`transformed successfully: [./${name}]`)
-                }
-            }
-        })
-        return this;
-    }
     async start(port:number){
         // start the HTTP server
         let middles = this.#middles;

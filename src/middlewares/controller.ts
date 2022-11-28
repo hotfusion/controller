@@ -77,7 +77,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         next();
         return this;
     }
-    install (){
+    async install (){
         this.#files = glob.sync([this.#source,'!node_modules'], { dot: true,cwd:this.#cwd }).map(x => path.resolve(this.#cwd,x));
         this.#files = this.#files.map(x => {
             let module = require(x.replace('.ts','.js')).default

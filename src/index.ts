@@ -1,17 +1,37 @@
-import { Host, CDN, Client, Controller } from "./classes";
+import { Host, Client } from "./classes";
+import {Transformer,CDN,Controller} from "./middlewares";
 import { resolve } from "path";
 import { Webpack } from "./webpack";
-let cwd : string = resolve(__dirname,'../www')
+
+
+let cwd : string = resolve(__dirname,'../www');
+
 let controller = new Controller({
     source : resolve(__dirname,'../www/**/*.controller.ts')
 })
-let host = new Host();
+
+let transformer = new Transformer({
+    source    : resolve(__dirname,'../www/**/*.s.ts'),
+    transform : async (File) => {
+        try{
+            File.content = (<any> await Webpack(<any>{
+                entry : File.path
+            })).content;
+        }catch (e) {
+            console.error(e);
+        }
+        return File;
+    }
+});
+
 let cdns = {
     vue    : new CDN('@vue','https://unpkg.com/vue@3'),
     moment : new CDN('@moment','https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js')
 }
 
+let host = new Host();
 host.use(controller.use)
+host.use(transformer.use);
 host.use(cdns.vue.use);
 host.use(cdns.moment.use);
 
@@ -19,16 +39,6 @@ host.use((socket,next) => {
     next()
 });
 
-host.transformer(resolve(__dirname,'../www/**/*.s.ts'),async (File) => {
-    try{
-        File.content = (<any> await Webpack(<any>{
-            entry : File.path
-        })).content;
-    }catch (e) {
-        console.error(e);
-    }
-    return File;
-});
 
 host.on('client', ({connect,exception}) => {
    // console.log('client wants connected')

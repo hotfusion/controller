@@ -5,14 +5,19 @@ export default class MiddlewareFactory implements MiddleWareInterface{
         (<any>this.use).handshake = this.handshake.bind(this);
         (<any>this.use).className = this.constructor.name;
     }
+    async install() {
+        return this;
+    }
 
     handshake(socket): object {
         return {};
     }
 
-    install() {
-    }
-
     use(request, respond, next) {
+        return this;
     }
 }
+
+export {Transformer} from './transformer';
+export {Controller} from './controller';
+export {CDN} from './cdn'
