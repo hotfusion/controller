@@ -30,27 +30,27 @@ let cdns = {
 }
 
 let host = new Host();
-host.use(controller.use)
-host.use(transformer.use);
-host.use(cdns.vue.use);
-host.use(cdns.moment.use);
 
-host.use((socket,next) => {
-    next()
-});
+host.use(controller.use)
+    .use(transformer.use)
+    .use(cdns.vue.use)
+    .use(cdns.moment.use)
+    .use((socket,next) => {
+        next();
+    });
 
 
 host.on('client', ({connect,exception}) => {
-   // console.log('client wants connected')
     connect({})
 });
 
 host.on('exception', (exception) => {
     console.error(exception)
-})
+});
+
 host.on('mounted' , () => {
     new Client().on('handshake', (GM) => {
-        console.log('client connected',GM)
+        console.log('client connected')
     }).on('exception',(event) => {
         console.log('exception',event)
     }).connect(5500)

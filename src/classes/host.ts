@@ -22,7 +22,7 @@ export class Host extends EventEmitter {
     readonly #ssl
     readonly #http
     readonly #io
-    readonly #middles:{callback: IEvent | string, dir?:string | Function, install:Function}[] = []
+    readonly #middles:{callback: IEvent | string, dir?:string | Function}[] = []
     readonly #getArguments = (V) => V.toString().match(/\((.*)\)/)[0].split(',')
     constructor() {
         super();
@@ -95,34 +95,33 @@ export class Host extends EventEmitter {
     use(callback: IEvent | string, dir?:string | Function) {
         this.#middles.push({
             callback  : callback,
-            dir       : dir,
-            install   : function (callback,dir) {
-                // if string we assume its a static path
-                if(typeof callback === 'string')
-                    if(dir) {
-                        (<any>console).info(`host watching path: [${utils.$toLinuxPath(path.resolve(dir,'.' + callback))}]`)
-                        return this.#express.use(callback, express.static(dir));
-                    }else
-                        return this.#express.use(express.static(callback));
-
-                // for socket use the arguments length should be 2
-                if(callback.type === 'socket' || this.#getArguments(callback).length === 2)
-                    return this.#io.use(callback)
-
-                this.#express.use(callback);
-            }.bind(this)
+            dir       : dir
         });
         return this;
     }
-
 
     async start(port:number){
         // start the HTTP server
         let middles = this.#middles;
         for(let i = 0; i < middles.length; i++){
-            let {callback,dir,install} = middles[i];
+            let {callback,dir} = middles[i];
             await (<any>callback)?.install?.();
-            await install(callback,dir);
+            // if string we assume its a static path
+            if(typeof callback === 'string')
+                if(dir) {
+                    (<any>console).info(`host watching path: [${utils.$toLinuxPath(path.resolve(dir,'.' + callback))}]`)
+                    this.#express.use(callback, express.static(dir));
+                }else
+                    this.#express.use(express.static(callback));
+
+            if(typeof callback === 'function') {
+                // for socket use the arguments length should be 2
+                if ((<any>callback).type === 'socket' || this.#getArguments(callback).length === 2)
+                    this.#io.use(callback);
+
+                if ((<any>callback).type !== 'socket' || this.#getArguments(callback).length === 3)
+                    this.#express.use(callback);
+            }
         }
         this.#http.listen(port, () => {
             console.info(chalk.greenBright('server is running at:'), port);
