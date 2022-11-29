@@ -18,11 +18,13 @@ export class Console {
                 label: (event) => {
                     if(event.method === 'error')
                         return chalk.redBright(`[${event.method}]`);
+                    if(event.method === 'warn')
+                        return chalk.yellowBright(`[${event.method}]`);
 
                     return chalk.bold.blueBright(`[${event.method}]`);
                 },
                 msg: (event:any)=> {
-                    if(event.method === 'error')
+                    if(event.method === 'error' || event.method === 'warn')
                         return chalk.bold(this.parse(event.msg))
 
                     return this.parse(event.msg)

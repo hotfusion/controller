@@ -1,7 +1,7 @@
-import HF, {type,protection} from "../src/HF";
+import { type,protection } from "../src/HF";
 
-/*class Types {
-    @type static string(Value){
+class Types {
+    @type string(Value){
     }
     @type number(Value){
     }
@@ -9,28 +9,29 @@ import HF, {type,protection} from "../src/HF";
     }
     @type any(Value){
     }
-}*/
+}
 
 
-export default class StreamController {
-    protected a() : StreamObject {
-        return
-    }
-
-    /*@protection firewall  (event : { socket:any, arguments:any }, { allow, deny })  {
+export default class StreamController extends Types {
+    @protection firewall  (event : { socket:any, arguments:any }, { allow, deny })  {
 
     }
-
     protected catalog = {
-        create(name:string[],email:string,phone:number): StreamObject {
+        create(name:string,email:string,phone:number):  StreamObject {
             let obj:StreamObject | any  = {}
                 obj.g = ''
 
-            return obj
+            return {
+                name:'vadim',
+                email : 'wdw',
+                date : {
+                    today : new Date()
+                }
+            }
         },
-        get() : StreamObject {
+        get(s:string) : StreamObject {
             return
         }
 
-    }*/
+    }
 }

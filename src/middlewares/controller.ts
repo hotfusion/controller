@@ -48,10 +48,13 @@ class Helper {
                         if(!interfaces[relative])
                             interfaces[relative] = []
 
-                        interfaces[relative].push({
-                            path  : path.join('.'),
-                            types : p.node?.typeAnnotation?.typeAnnotation
-                        })
+                        let annotation = p.node?.typeAnnotation?.typeAnnotation;
+                        if(annotation?.type !== 'TSTypeLiteral')
+                            interfaces[relative].push({
+                                name  : path.join('.').split('.').shift(),
+                                path  : path.join('.').split('.').splice(1).join('.'),
+                                types : annotation?.types?.map?.(x => x.type) || (annotation?.type?[annotation?.typeName?.name|| annotation.type]:[])
+                            })
                     }
                 }
             })
@@ -62,47 +65,50 @@ class Helper {
 }
 
 export class Controller extends MiddlewareFactory implements MiddleWareInterface {
-    #files
-    #source
-    #cwd
+    #files = []
+    readonly #source
+    readonly #cwd
+    readonly #interfaces = {}
     constructor({source}) {
-        super()
-        this.#cwd = source.split('*')[0];
-        this.#source = utils.$toLinuxPath(source.slice(source.indexOf('*'),source.length));
-        console.log(Helper.getAllInterfaces(this.#cwd))
+        super();
+
+        this.#cwd        = source.split('*')[0];
+        this.#source     = utils.$toLinuxPath(source.slice(source.indexOf('*'),source.length));
+        this.#interfaces = Helper.getAllInterfaces(this.#cwd);
     }
     use(socket,next){
         for(let i = 0; i < this.#files.length; i++){
             let file = this.#files[i];
-
-            let {_types,_public,_alias} = file.module.prototype;
-
-            let controller = new file.module();
-
+            let {_types,_public,_alias} = file.module.prototype, controller = new file.module();
+            let interfaces = Object.keys(this.#interfaces).map(filename => {
+                return this.#interfaces[filename]
+            });
+            //console.log('interfaces',interfaces)
             Object.keys(file.methods).forEach(_path => {
                 let method = file.methods[_path];
                 if(method.accessibility === 'protected'){
                     (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
                         let f = get(controller, _path.split('.').splice(1).join('.'));
-                        let errors = []
+                        let errors = [];
                         method.params.forEach(x => {
                             let value = object[x.name]
                             let types = x.types;
 
-                            types.forEach(typeName => {
-                                let evaluate = _types.find(y => y === typeName);
-                                if(!evaluate)
-                                    console.error(`Missing type validation [${typeName}] for ${_path}: ${x.name}`);
-                                else
-                                    try{
-                                        controller[evaluate](x.name,value);
-                                    }catch(e){
-                                        errors.push(e)
-                                    }
-                            })
+                            if(types.length && !_types?.find)
+                                console.error(`Controller method [${chalk.red(_path)}] => [${x.name}:${chalk.yellow(types.join(' | '))}] requires type declaration: @type ${chalk.yellow(types.join(' | '))} : (key,value) => {}`);
+                            else
+                                types.forEach(typeName => {
+                                    let evaluate = _types.find(y => y === typeName);
+                                    if(!evaluate)
+                                        console.error(`Missing type validation [${typeName}] for ${_path}: ${x.name}`);
+                                    else
+                                        try{
+                                            controller[evaluate](x.name,value);
+                                        }catch(e){
+                                            errors.push(e)
+                                        }
+                                })
                         });
-
-
                         if(errors.length)
                             return exception({
                                 path   : _path,
@@ -110,10 +116,27 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             });
 
                         try{
-                            complete(await f.apply(
+                            let value = await f.apply(
                                 controller,
                                 [...Object.values(object),socket]
-                            ));
+                            );
+                            // return interface schema
+                            let schema;
+                            if(method.interface){
+                                schema = {}
+                                let interfaces = Object.keys(this.#interfaces).map(x => this.#interfaces[x].filter(y => y.name === method.interface)).flat();
+                                    interfaces.forEach(x => set(schema,x.path.split('.'),{}));
+
+                                interfaces.forEach(inter => {
+                                    if(get(value,inter.path) === undefined){
+                                        set(schema,inter.path,null)
+                                        return console.warn(`Returned object from method [${chalk.yellow(_path)}] is missing property  [${chalk.bold.white(inter.name)}.${chalk.redBright(inter.path)}]`)
+                                    }else
+                                        set(schema,inter.path,get(value,inter.path))
+                                })
+                            }
+
+                            complete(schema || value);
                         }catch (e) {
 
                             console
@@ -127,25 +150,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     })
                 }
             })
-            /*_public.forEach(name => {
-                let channels = [[_alias || file.module.name,name]];
-                channels.forEach(channelName => {
-                    (<any>socket.transaction)(channelName.join('.'),async ({complete,exception,object}) => {
-                        try{
-                            await validateType(name, object);
-                            let values = Object.values(object);
-
-                            complete(
-                                await controller[name].apply(
-                                    controller, [...(values.length?values:[object]),socket]
-                                )
-                            );
-                        }catch (e) {
-                            exception(e.message)
-                        }
-                    })
-                });
-            });*/
         }
 
         next();
@@ -169,9 +173,8 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                 try{
                     f.arrowFunctionToExpression()
                 }
-                catch (e) {
+                catch (e) {}
 
-                }
                 let decNames = f.parentPath.parent.decorators?.map?.(x =>
                     // works with @HF.public() method(){}
                     x.expression?.callee?.property?.name ||
@@ -237,6 +240,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     }
                     return meta.params;
                 });
+
                 if(_path.join('.').startsWith(module.name))
                     methods[_path.join('.')] = {
                         params        : types.flat().map(x => {
@@ -256,15 +260,12 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             });
                             return x;
                         }),
-                        accessibility : accessibility
+                        accessibility : accessibility,
+                        interface     : f.node.returnType?.typeAnnotation?.typeName?.name || f.node.returnType?.typeAnnotation?.type || false
                     };
             }
 
             traverse(ast, {
-                /*ArrowFunctionExpression(path) {
-                    // found more info : https://jonkuperman.com/converting-arrow-functions-to-function-expressions-babel/
-                    return path.arrowFunctionToExpression()
-                },*/
                 Function(path){
                     parse(path)
                 }
@@ -272,7 +273,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
             console
                 .info(`${chalk.magenta('controller:')} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
-
 
             return {
                 methods : methods,
