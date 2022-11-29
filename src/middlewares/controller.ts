@@ -88,54 +88,87 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                 plugins: ["decorators","typescript"]
             });
 
+            let parse = (f) => {
+                if(!f?.container?.key?.name && !f?.node?.key)
+                    return
+                let decNames = f.parentPath.parent.decorators?.map?.(x =>
+                    // works with @HF.public() method(){}
+                    x.expression?.callee?.property?.name ||
+                    // works with @HF.public method(){}
+                    x.expression?.property?.name
+                ) || [];
+
+                // loop back to get the full patch of the classMethod
+                let parent = f.parentPath, _path = [],accessibility = 'private'
+                while(true){
+                    if(!parent) {
+                        break
+                    }
+                    if(parent?.node?.accessibility === 'public' || parent?.node?.accessibility === 'protected')
+                        accessibility = parent.node.accessibility
+
+                   // console.log(parent)
+                    if(parent.parent?.key?.name)
+                        _path.unshift(parent.parent?.key?.name);
+
+                    if(parent.parent?.id?.name)
+                        _path.unshift(parent.parent?.id?.name);
+
+
+                    parent = parent.parentPath;
+                }
+
+
+                // name of the function
+                _path.push(
+                    // @HF.public a = {b: () => {}}
+                    f?.container?.key?.name ||
+                    // @HF.public a = {b() {}}
+                    f.node.key.name)
+
+                let types = f.node.params.map(P => {
+                    let meta = {
+                        params : []
+                    }
+                    // method with the default value
+                    // method(a:string = true)
+                    if(P.left && P.right){
+                        let A = P?.left?.typeAnnotation?.typeAnnotation;
+                        meta.params.push({
+                            name    : P?.left?.name,
+                            default : P?.right?.value,
+                            types   : (A?.types?.map?.(x => x?.elementType?.type || x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
+                        })
+                    }
+                    // if default value was not initiated
+                    // method(a:string)
+                    if(P.typeAnnotation){
+                        let A = P.typeAnnotation?.typeAnnotation
+                        meta.params.push({
+                            name    : P?.name,
+                            default : P?.right?.value,
+                            types   : (A?.types?.map?.(x => x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
+                        })
+                    }
+                    return meta.params;
+                });
+
+                if(_path.join('.').startsWith(module.name))
+                    methods[_path.join('.')] = {
+                        params        : types.flat(),
+                        accessibility : accessibility
+                    };
+            }
             traverse(ast, {
                 Function(f){
-
-                    let decNames = f.parentPath.parent.decorators?.map?.(x => x.expression.callee.property.name) || []
-                    let parent   = f.parentPath, _path = []
-
-                    while(true){
-                        if(!parent)
-                            break;
-
-                        if(parent.parent?.key?.name) _path.unshift(parent.parent?.key?.name);
-                        if(parent.parent?.id?.name)  _path.unshift(parent.parent?.id?.name);
-
-                        parent = parent.parentPath
-                    }
-
-                    _path.push(f.node.key.name)
-
-                    let types = f.node.params.map(P => {
-                        let meta = {
-                            params : []
-                        }
-                        if(P.left && P.right){
-                            let A = P?.left?.typeAnnotation?.typeAnnotation;
-                            meta.params.push({
-                                name    : P?.left?.name,
-                                default : P?.right?.value,
-                                types   : (A?.types?.map?.(x => x?.elementType?.type || x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
-                            })
-                        }
-                        if(P.typeAnnotation){
-                            let A = P.typeAnnotation?.typeAnnotation
-                            meta.params.push({
-                                name    : P?.name,
-                                default : P?.right?.value,
-                                types   : (A?.types?.map?.(x => x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
-                            })
-                        }
-                        return meta.params;
-                    });
-
-                    methods[_path.join('.')] = types.flat();
+                    parse(f)
                 }
             });
 
             console
                 .info(`${chalk.magenta('controller:')} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
 
+            console.log(methods,module.name)
             return {
                 methods : methods,
                 module  : module,

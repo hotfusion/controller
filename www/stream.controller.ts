@@ -6,7 +6,11 @@ class Types {
     }
 }
 export default class StreamController extends Types{
-    /*@HF.public create = (name:string) => {
-        return
-    }*/
+    public a = {
+        d : {
+            b(){
+
+            }
+        }
+    }
 }
