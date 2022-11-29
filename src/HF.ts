@@ -10,6 +10,13 @@ export const type = (target,name) => {
     target._types.push(name);
     return target;
 }
+export const protection = (target,name) => {
+    if(!target._protection)
+        target._protection = [];
+
+    target._protection.push(name);
+    return target;
+}
 
 export default class HF implements Interface {
     static public (target?:any,name?:string){
@@ -29,6 +36,17 @@ export default class HF implements Interface {
         return (target) => {
             target.prototype._alias = name;
             return target
+        }
+    }
+    static interface (target?:any,name?:string){
+        if(name)
+            return target[name];
+
+        return (target,name,c) => {
+            if(!target._interfaces)
+                target._interfaces = [];
+
+            target._interfaces.push(name);
         }
     }
 }

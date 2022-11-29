@@ -13,7 +13,19 @@ export class IO extends Server {
             socket.emit(ChannelName,ChannelData)
 
         socket.transaction = (ChannelName,ChannelCallback) =>
-            socket.on(ChannelName?.join?.('.') || ChannelName, (ChannelTransactionEvent:{object,_tid}) => ChannelCallback({object:ChannelTransactionEvent.object,exception: (data) => this.emit(ChannelTransactionEvent._tid,{error:data}),complete: (data) => socket.emit(ChannelTransactionEvent._tid,{transaction:data})}));
+            socket.on(
+                ChannelName?.join?.('.') || ChannelName, (ChannelTransactionEvent:{object,_tid}) => {
+                    ChannelCallback({
+                        object: ChannelTransactionEvent.object,
+                        exception: (data) => {
+                            socket.emit(ChannelTransactionEvent._tid, {error: data})
+                        },
+                        complete: (data) => {
+                            socket.emit(ChannelTransactionEvent._tid, {transaction: data})
+                        }
+                    })
+                }
+            );
 
         next()
     }

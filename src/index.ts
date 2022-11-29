@@ -47,7 +47,17 @@ host.on('exception', (exception) => {
 });
 
 host.on('mounted' , () => {
-    new Client().on('handshake', (event) => {
+    new Client().on('handshake', ({client}) => {
+
+        client.transaction('StreamController.catalog.create',{
+            name : 'vadim',
+            email : 'k@l.com',
+            phone: 514999669,
+            male : true
+        },7000).then(x => {
+            console.log('good',x)
+        }).catch(e => console.error(e));
+
         console.log('client connected')
     }).on('exception',(event) => {
         console.log('exception',event)

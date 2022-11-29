@@ -118,11 +118,24 @@ export class Host extends EventEmitter {
             if(typeof callback === 'function') {
                 // for socket use the arguments length should be 2
                 if ((<any>callback).type === 'socket' || this.#getArguments(callback).length === 2)
-                    this.#io.use(callback);
+                    this.#io.use((socket,next) =>{
+                        try{
+                            (<any>callback)(socket,next)
+                        }catch (e) {
+                            console.error(e)
+                        }
+                    });
 
                 if ((<any>callback).type === 'http' || this.#getArguments(callback).length === 3)
-                    this.#express.use(callback);
+                    this.#express.use((req,res,next) => {
+                        try{
+                            (<any>callback)(req,res,next)
+                        }catch (e) {
+                            console.error(e)
+                        }
+                    });
             }
+
         }
         this.#http.listen(port, () => {
             console.info(chalk.greenBright('server is running at:'), port);

@@ -13,14 +13,18 @@ export class Console {
     pattern = '⢹⢺⢼⣸⣇⡧⡗⡏'
     constructor() {
         stamp( console , {
-            format : ':date(HH:MM:ss.l).grey :label().blue :msg()',
+            format : ':date(HH:MM:ss.l).grey :label() :msg()',
             tokens :{
                 label: (event) => {
-                    return `[${event.method}]`;
+                    if(event.method === 'error')
+                        return chalk.redBright(`[${event.method}]`);
+
+                    return chalk.bold.blueBright(`[${event.method}]`);
                 },
                 msg: (event:any)=> {
-                    if(event.msg.startsWith('--'))
-                        return event.msg.replace('--','\n');
+                    if(event.method === 'error')
+                        return chalk.bold(this.parse(event.msg))
+
                     return this.parse(event.msg)
                 }
             }

@@ -5,8 +5,62 @@ import * as path from "path";
 import * as fs from "fs";
 import {utils} from "../classes/utils";
 import MiddlewareFactory from "./index";
-
+import {get,set} from 'lodash';
 const chalk = require('chalk');
+
+
+class Helper {
+   static getAllInterfaces(cwd){
+        let interfaces = {}
+        let files = glob.sync(['**/*.d.ts','!node_modules'], { dot: true,cwd:cwd}).map(x => ({path:path.resolve(cwd,x),relative:x}));
+
+        files.map(({path,relative}) => ({
+            code     : fs.readFileSync(path).toString(),
+            path     : path,
+            relative : relative
+        })).forEach(({code,path,relative}) => {
+            let ast = parser.parse(code,{
+                allowImportExportEverywhere : true,
+                plugins : ["decorators","typescript"]
+            });
+
+            traverse(ast, {
+                TSPropertySignature(p){
+                    let path   = [];
+                    let parent = p;
+                    let TSInterfaceBody = false;
+                    while(true){
+                        if(parent.node.type === 'Program')
+                            break
+
+                        if(parent?.node.type === 'TSInterfaceBody'){
+                            TSInterfaceBody = true;
+                        }
+
+                        let name = parent?.node?.id?.name || parent?.node?.key?.name
+                        if(name)
+                            path.unshift(name);
+
+                        parent = parent.parentPath;
+                    }
+
+                    if(TSInterfaceBody) {
+                        if(!interfaces[relative])
+                            interfaces[relative] = []
+
+                        interfaces[relative].push({
+                            path  : path.join('.'),
+                            types : p.node?.typeAnnotation?.typeAnnotation
+                        })
+                    }
+                }
+            })
+        });
+
+        return interfaces;
+    }
+}
+
 export class Controller extends MiddlewareFactory implements MiddleWareInterface {
     #files
     #source
@@ -15,51 +69,71 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         super()
         this.#cwd = source.split('*')[0];
         this.#source = utils.$toLinuxPath(source.slice(source.indexOf('*'),source.length));
+        console.log(Helper.getAllInterfaces(this.#cwd))
     }
     use(socket,next){
         for(let i = 0; i < this.#files.length; i++){
             let file = this.#files[i];
-            let {_types,_public, _packages,_alias} = file.module.prototype;
 
-            _packages = _packages || [];
-            _public   = _public   || [];
+            let {_types,_public,_alias} = file.module.prototype;
 
             let controller = new file.module();
 
+            Object.keys(file.methods).forEach(_path => {
+                let method = file.methods[_path];
+                if(method.accessibility === 'protected'){
+                    (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
+                        let f = get(controller, _path.split('.').splice(1).join('.'));
+                        let errors = []
+                        method.params.forEach(x => {
+                            let value = object[x.name]
+                            let types = x.types;
 
-            let validateType = async (name, object) => {
-                for (let i = 0 ; i < Object.keys(object).length;i++) {
-                    let key = Object.keys(object)[i];
-                    let type =
-                        file.methods?.[name]?.[i]?.type;
+                            types.forEach(typeName => {
+                                let evaluate = _types.find(y => y === typeName);
+                                if(!evaluate)
+                                    console.error(`Missing type validation [${typeName}] for ${_path}: ${x.name}`);
+                                else
+                                    try{
+                                        controller[evaluate](x.name,value);
+                                    }catch(e){
+                                        errors.push(e)
+                                    }
+                            })
+                        });
 
-                    if(!type)
-                        throw new Error(
-                            `exception in transaction: missing type => {${key}}`
-                        );
 
-                    await controller[type](object[key]);
+                        if(errors.length)
+                            return exception({
+                                path   : _path,
+                                errors : errors.map(x => x?.message || x)
+                            });
+
+                        try{
+                            complete(await f.apply(
+                                controller,
+                                [...Object.values(object),socket]
+                            ));
+                        }catch (e) {
+
+                            console
+                                .error(e);
+
+                            exception({
+                                path   : _path,
+                                errors : ['Exception occurred in controller method, for details see the logs.']
+                            });
+                        }
+                    })
                 }
-            }
-            _public.forEach(name => {
+            })
+            /*_public.forEach(name => {
                 let channels = [[_alias || file.module.name,name]];
-                if(_packages.find(x => x === name))
-                    channels = Object.keys(controller[name])
-                        .map(key => [_alias || file.module.name,name,key])
-
                 channels.forEach(channelName => {
                     (<any>socket.transaction)(channelName.join('.'),async ({complete,exception,object}) => {
                         try{
                             await validateType(name, object);
                             let values = Object.values(object);
-
-                            let key = _packages.find(x => x === name);
-                            if(key)
-                                return complete(
-                                    await controller[name][key].apply(
-                                        controller, [...(values.length?values:[object]),socket]
-                                    )
-                                );
 
                             complete(
                                 await controller[name].apply(
@@ -71,9 +145,9 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                         }
                     })
                 });
-
-            });
+            });*/
         }
+
         next();
         return this;
     }
@@ -91,6 +165,13 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             let parse = (f) => {
                 if(!f?.container?.key?.name && !f?.node?.key)
                     return
+
+                try{
+                    f.arrowFunctionToExpression()
+                }
+                catch (e) {
+
+                }
                 let decNames = f.parentPath.parent.decorators?.map?.(x =>
                     // works with @HF.public() method(){}
                     x.expression?.callee?.property?.name ||
@@ -99,7 +180,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                 ) || [];
 
                 // loop back to get the full patch of the classMethod
-                let parent = f.parentPath, _path = [],accessibility = 'private'
+                let parent = f.parentPath, _path = [],accessibility = 'private',ignore = false;
                 while(true){
                     if(!parent) {
                         break
@@ -107,17 +188,20 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     if(parent?.node?.accessibility === 'public' || parent?.node?.accessibility === 'protected')
                         accessibility = parent.node.accessibility
 
-                   // console.log(parent)
                     if(parent.parent?.key?.name)
                         _path.unshift(parent.parent?.key?.name);
 
                     if(parent.parent?.id?.name)
                         _path.unshift(parent.parent?.id?.name);
 
+                    if(parent.node.type === 'BlockStatement')
+                        ignore = true;
 
                     parent = parent.parentPath;
                 }
 
+                // if the method is inside BlockStatement it's mean the method is not part of the ClassBody object
+                if(ignore)return;
 
                 // name of the function
                 _path.push(
@@ -126,7 +210,8 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     // @HF.public a = {b() {}}
                     f.node.key.name)
 
-                let types = f.node.params.map(P => {
+
+                let types = (f.node?.callee || f.node).params.map(P => {
                     let meta = {
                         params : []
                     }
@@ -152,23 +237,43 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     }
                     return meta.params;
                 });
-
                 if(_path.join('.').startsWith(module.name))
                     methods[_path.join('.')] = {
-                        params        : types.flat(),
+                        params        : types.flat().map(x => {
+                            x.types = x.types.map(y => {
+                                if(y === 'TSStringKeyword')
+                                    return 'string';
+                                if(y === 'TSNumberKeyword')
+                                    return 'number';
+                                if(y === 'TSBooleanKeyword')
+                                    return 'boolean';
+                                if(y === 'TSAnyKeyword')
+                                    return 'any';
+                                if(y === 'TSObjectKeyword')
+                                    return 'object';
+
+                                return y
+                            });
+                            return x;
+                        }),
                         accessibility : accessibility
                     };
             }
+
             traverse(ast, {
-                Function(f){
-                    parse(f)
+                /*ArrowFunctionExpression(path) {
+                    // found more info : https://jonkuperman.com/converting-arrow-functions-to-function-expressions-babel/
+                    return path.arrowFunctionToExpression()
+                },*/
+                Function(path){
+                    parse(path)
                 }
             });
 
             console
                 .info(`${chalk.magenta('controller:')} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
 
-            console.log(methods,module.name)
+
             return {
                 methods : methods,
                 module  : module,

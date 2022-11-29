@@ -22,7 +22,8 @@
     "moment": "^2.29.4",
     "@babel/parser": "^7.20.3",
     "@babel/traverse": "^7.20.1",
-    "prettyjson": "^1.2.5"
+    "prettyjson": "^1.2.5",
+    "lodash": "^4.17.21"
   },
   "scripts": {
     "controller": "node ./dist/index.js"
