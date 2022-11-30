@@ -13,7 +13,7 @@ class StreamController {
     }
 
     protected catalog = {
-        create(name:string) : StreamObject {
+        create(name : 'user' | 'red') : StreamObject {
             return {
                 test  : '',
                 name  : '1233',
