@@ -5,6 +5,7 @@ const resolves = [
     path.resolve(__dirname, '../node_modules')
 ];
 
+
 export const Webpack = function({entry,output}){
     let filename = utils.$objectId() + '.js';
     let config =  {
@@ -28,7 +29,8 @@ export const Webpack = function({entry,output}){
         },
         resolve: {
             modules    : resolves,
-            extensions : ['.ts','.css','.js']
+            extensions : ['.ts','.css','.js'],
+            //plugins    : [new TsconfigPathsPlugin({configFile:path.resolve(__dirname,'../')})]
         },
         module : {
             rules: [{
@@ -51,7 +53,8 @@ export const Webpack = function({entry,output}){
                     loader : 'ts-loader',
                     options: {
                         onlyCompileBundledFiles: true,
-                        allowTsInNodeModules : true
+                        allowTsInNodeModules : true,
+                        transpileOnly: true
                     }
                 }]
             }]

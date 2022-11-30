@@ -4,14 +4,16 @@ import { Types } from "./types";
 @types(Types)
 @alias('SC')
 class StreamController {
+    //
     @firewall packets (event : { socket:any, arguments:any }, { allow, deny })  {
 
     }
+
     public catalog = {
         create(name:string) : StreamObject {
             return {
                 test  : '',
-                name  : 'mike',
+                name  : '1233',
                 email : '5149996559',
                 date  : {
                     today : new Date()

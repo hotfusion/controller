@@ -23,7 +23,10 @@
     "@babel/parser": "^7.20.3",
     "@babel/traverse": "^7.20.1",
     "prettyjson": "^1.2.5",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "babel-loader": "^9.1.0",
+    "clear-module": "^4.1.2",
+    "import-fresh": "^3.3.0"
   },
   "scripts": {
     "controller": "node ./dist/index.js"

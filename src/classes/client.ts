@@ -8,7 +8,7 @@ export class Client extends EventEmitter {
         super();
     }
     connect(port){
-        let spinner = (<any>console).spinner(`client trying to connect to: http://localhost:${port}`,'connecting')
+        console.info(`client trying to connect to: http://localhost:${port}`,'connecting')
 
         this.#connection = io(`http://localhost:${port}`,{
             timeout      : 5000,
@@ -16,32 +16,28 @@ export class Client extends EventEmitter {
         });
 
         this.#connection.on('handshake', (event) => {
-                spinner.stop()
+                console.info(`connected to: http://localhost:${port}`)
                 this.emit('handshake', Object.assign(event || {},{client:this}));
             }
         );
 
         this.#connection.on('disconnect', (event) => {
                 this.emit('disconnect', event);
-                spinner.stop()
             }
         );
 
         this.#connection.on('exception', (event) => {
                 this.emit('exception', event);
-                spinner.stop();
             }
         );
 
         this.#connection.on('connect_failed', (event) => {
                 this.emit('exception', event);
-                spinner.stop()
             }
         );
 
         this.#connection.on('error', (event) => {
                 this.emit('exception', event);
-                spinner.stop();
             }
         );
     }

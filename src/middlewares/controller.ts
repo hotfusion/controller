@@ -7,7 +7,7 @@ import {utils} from "../classes/utils";
 import MiddlewareFactory from "./index";
 import {get,set} from 'lodash';
 const chalk = require('chalk');
-
+const clearModule = require('clear-module');
 
 class Helper {
    static getAllInterfaces(cwd){
@@ -77,18 +77,20 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         this.#interfaces = Helper.getAllInterfaces(this.#cwd);
     }
     use(socket,next){
-        for(let i = 0; i < this.#files.length; i++){
-            let file = this.#files[i];
-            let {_types, _classTypes ,_public,_alias} = file.module.prototype, controller = new file.module();
+        let files =  this.#files;
+
+        for(let i = 0; i < files.length; i++){
+            let file = files[i];
+            let {_types, _classTypes ,_public,_alias} = file.module.prototype,
+                controller = new file.module();
 
             if(_classTypes)
                 _classTypes = new _classTypes()
 
-
             let interfaces = Object.keys(this.#interfaces).map(filename => {
                 return this.#interfaces[filename]
             });
-            //console.log('interfaces',interfaces)
+
             Object.keys(file.methods).forEach(_path => {
                 let method = file.methods[_path];
                 if(method.accessibility === 'protected' || method.accessibility === 'public'){
@@ -172,152 +174,173 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         return this;
     }
     async install (){
-        this.#files = glob.sync([this.#source,'!node_modules'], { dot: true,cwd:this.#cwd }).map(x => path.resolve(this.#cwd,x));
-        this.#files = this.#files.map(x => {
-            let module = require(x.replace('.ts','.js')).default
-            let methods = {}
-            let code    = fs.readFileSync(x).toString();
-            let ast     = parser.parse(code,{
-                allowImportExportEverywhere:true,
-                plugins: ["decorators","typescript"]
-            });
-
-            let parse = (f) => {
-                // TSTypeParameterDeclaration
-                let declarations = f.node?.typeParameters?.params?.map?.(x => ({name:x.name,type:x.constraint?.typeName?.name || x.constraint?.type || x?.type})) || [];
-                declarations = declarations.map(x => {
-                    x.type = ((y) => {
-                        if (y === 'TSStringKeyword')
-                            return 'string';
-                        if (y === 'TSNumberKeyword')
-                            return 'number';
-                        if (y === 'TSBooleanKeyword')
-                            return 'boolean';
-                        if (y === 'TSAnyKeyword')
-                            return 'any';
-                        if (y === 'TSObjectKeyword')
-                            return 'object';
-
-                        return y
-                    })(x.type);
-                    return x;
-                })
-                //console.log(declarations)
-                if(!f?.container?.key?.name && !f?.node?.key)
-                    return
-
-                try{
-                    f.arrowFunctionToExpression()
-                }
-                catch (e) {}
-
-                let decNames = f.parentPath.parent.decorators?.map?.(x =>
-                    // works with @HF.public() method(){}
-                    x.expression?.callee?.property?.name ||
-                    // works with @HF.public method(){}
-                    x.expression?.property?.name
-                ) || [];
-
-                // loop back to get the full patch of the classMethod
-                let parent = f.parentPath, _path = [],accessibility = 'private',ignore = false;
-                while(true){
-                    if(!parent) {
-                        break
-                    }
-                    if(parent?.node?.accessibility === 'public' || parent?.node?.accessibility === 'protected')
-                        accessibility = parent.node.accessibility
-
-                    if(parent.parent?.key?.name)
-                        _path.unshift(parent.parent?.key?.name);
-
-                    if(parent.parent?.id?.name)
-                        _path.unshift(parent.parent?.id?.name);
-
-                    if(parent.node.type === 'BlockStatement')
-                        ignore = true;
-
-                    parent = parent.parentPath;
-                }
-
-                // if the method is inside BlockStatement it's mean the method is not part of the ClassBody object
-                if(ignore)return;
-
-                // name of the function
-                _path.push(
-                    // @HF.public a = {b: () => {}}
-                    f?.container?.key?.name ||
-                    // @HF.public a = {b() {}}
-                    f.node.key.name)
-
-
-                let types = (f.node?.callee || f.node).params.map(P => {
-                    let meta = {
-                        params : []
-                    }
-                    // method with the default value
-                    // method(a:string = true)
-                    if(P.left && P.right){
-                        let A = P?.left?.typeAnnotation?.typeAnnotation;
-                        meta.params.push({
-                            name    : P?.left?.name,
-                            default : P?.right?.value,
-                            types   : (A?.types?.map?.(x => x?.elementType?.type || x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
-                        })
-                    }
-                    // if default value was not initiated
-                    // method(a:string)
-                    if(P.typeAnnotation){
-                        let A = P.typeAnnotation?.typeAnnotation;
-                        meta.params.push({
-                            name        : P?.name,
-                            default     : P?.right?.value,
-                            types       : (A?.types?.map?.(x => x?.typeName?.name || x.type) || [A?.elementType?.type || A?.typeName?.name || A?.type]).filter(x => x)
-                        })
-                    }
-                    return meta.params;
+        let getFiles = () =>{
+            let files = glob.sync([this.#source,'!node_modules'], { dot: true,cwd:this.#cwd }).map(x => path.resolve(this.#cwd,x));
+            return files.map(x => {
+                clearModule(x.replace('.ts','.js'))
+                let module  = require(x.replace('.ts','.js')).default
+                let methods = {}
+                let code    = fs.readFileSync(x).toString();
+                let ast     = parser.parse(code,{
+                    allowImportExportEverywhere:true,
+                    plugins: ["decorators","typescript"]
                 });
 
-                if(_path.join('.').startsWith(module.name))
-                    methods[_path.join('.')] = {
-                        params        : types.flat().map(x => {
-                            x.types = x.types.map(y => {
-                                if(y === 'TSStringKeyword')
-                                    return 'string';
-                                if(y === 'TSNumberKeyword')
-                                    return 'number';
-                                if(y === 'TSBooleanKeyword')
-                                    return 'boolean';
-                                if(y === 'TSAnyKeyword')
-                                    return 'any';
-                                if(y === 'TSObjectKeyword')
-                                    return 'object';
+                let parse = (f) => {
+                    // TSTypeParameterDeclaration
+                    let declarations = f.node?.typeParameters?.params?.map?.(x => ({name:x.name,type:x.constraint?.typeName?.name || x.constraint?.type || x?.type})) || [];
+                    declarations = declarations.map(x => {
+                        x.type = ((y) => {
+                            if (y === 'TSStringKeyword')
+                                return 'string';
+                            if (y === 'TSNumberKeyword')
+                                return 'number';
+                            if (y === 'TSBooleanKeyword')
+                                return 'boolean';
+                            if (y === 'TSAnyKeyword')
+                                return 'any';
+                            if (y === 'TSObjectKeyword')
+                                return 'object';
 
-                                return y
-                            });
-                            return x;
-                        }),
-                        accessibility : accessibility,
-                        declarations  : declarations,
-                        interface     : f.node.returnType?.typeAnnotation?.typeName?.name || f.node.returnType?.typeAnnotation?.type || false
-                    };
-            }
+                            return y
+                        })(x.type);
+                        return x;
+                    })
+                    //console.log(declarations)
+                    if(!f?.container?.key?.name && !f?.node?.key)
+                        return
 
-            traverse(ast, {
-                Function(path){
-                    parse(path)
+                    try{
+                        f.arrowFunctionToExpression()
+                    }
+                    catch (e) {}
+
+                    let decNames = f.parentPath.parent.decorators?.map?.(x =>
+                        // works with @HF.public() method(){}
+                        x.expression?.callee?.property?.name ||
+                        // works with @HF.public method(){}
+                        x.expression?.property?.name
+                    ) || [];
+
+                    // loop back to get the full patch of the classMethod
+                    let parent = f.parentPath, _path = [],accessibility = 'private',ignore = false;
+                    while(true){
+                        if(!parent) {
+                            break
+                        }
+                        if(parent?.node?.accessibility === 'public' || parent?.node?.accessibility === 'protected')
+                            accessibility = parent.node.accessibility
+
+                        if(parent.parent?.key?.name)
+                            _path.unshift(parent.parent?.key?.name);
+
+                        if(parent.parent?.id?.name)
+                            _path.unshift(parent.parent?.id?.name);
+
+                        if(parent.node.type === 'BlockStatement')
+                            ignore = true;
+
+                        parent = parent.parentPath;
+                    }
+
+                    // if the method is inside BlockStatement it's mean the method is not part of the ClassBody object
+                    if(ignore)return;
+
+                    // name of the function
+                    _path.push(
+                        // @HF.public a = {b: () => {}}
+                        f?.container?.key?.name ||
+                        // @HF.public a = {b() {}}
+                        f.node.key.name)
+
+
+                    let types = (f.node?.callee || f.node).params.map(P => {
+                        let meta = {
+                            params : []
+                        }
+                        // method with the default value
+                        // method(a:string = true)
+                        if(P.left && P.right){
+                            let A = P?.left?.typeAnnotation?.typeAnnotation;
+                            meta.params.push({
+                                name    : P?.left?.name,
+                                default : P?.right?.value,
+                                types   : (A?.types?.map?.(x => x?.elementType?.type || x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
+                            })
+                        }
+                        // if default value was not initiated
+                        // method(a:string)
+                        if(P.typeAnnotation){
+                            let A = P.typeAnnotation?.typeAnnotation;
+                            meta.params.push({
+                                name        : P?.name,
+                                default     : P?.right?.value,
+                                types       : (A?.types?.map?.(x => x?.typeName?.name || x.type) || [A?.elementType?.type || A?.typeName?.name || A?.type]).filter(x => x)
+                            })
+                        }
+                        return meta.params;
+                    });
+
+                    if(_path.join('.').startsWith(module.name))
+                        methods[_path.join('.')] = {
+                            params        : types.flat().map(x => {
+                                x.types = x.types.map(y => {
+                                    if(y === 'TSStringKeyword')
+                                        return 'string';
+                                    if(y === 'TSNumberKeyword')
+                                        return 'number';
+                                    if(y === 'TSBooleanKeyword')
+                                        return 'boolean';
+                                    if(y === 'TSAnyKeyword')
+                                        return 'any';
+                                    if(y === 'TSObjectKeyword')
+                                        return 'object';
+
+                                    return y
+                                });
+                                return x;
+                            }),
+                            accessibility : accessibility,
+                            declarations  : declarations,
+                            interface     : f.node.returnType?.typeAnnotation?.typeName?.name || f.node.returnType?.typeAnnotation?.type || false
+                        };
+                }
+
+                traverse(ast, {
+                    Function(path){
+                        parse(path)
+                    }
+                });
+
+                console
+                    .info(`${chalk.magenta(`controller ${this.#files.length?'updated':'installed'} :`)} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
+
+                return {
+                    methods : methods,
+                    module  : module,
+                    path    : x
                 }
             });
+        }
 
-            console
-                .info(`${chalk.magenta('controller:')} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
+        this.#files = getFiles();
+        this.#files.forEach(file => {
+            let to,tp;
+            fs.watch(file.path, (eventType, filename) => {
+                clearTimeout(to);
+                clearTimeout(tp);
+                to = setTimeout(() => {
+                    if(eventType === 'change')
+                        this.#files = getFiles();
+                },2000);
 
-
-            return {
-                methods : methods,
-                module  : module,
-                path    : x
-            }
+                tp = setTimeout(() => {
+                    console
+                        .info(`${chalk.yellow(`controller updating:`)} ${chalk.bold(file.module.name)} - [./${utils.$toLinuxPath(file.path).split('/').pop()}]`);
+                },100)
+            });
         });
+
         return this;
     }
     handshake(socket) {
