@@ -27,7 +27,6 @@ export const alias = (name:string) => {
         return target
     }
 }
-
 export const types = (_classTypes:ClassTypes) => {
     return (target) => {
         target.prototype._classTypes = _classTypes;
