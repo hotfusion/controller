@@ -4,12 +4,26 @@
 ``npm install @hotfusion/micro``
 
 #### usage
-*create a host file in your root directory `host.ts`*
+
+*create controller file in your root directory `products.controller.ts`*
+```ts
+/** products.controller.ts **/
+export default class Products {
+    public buy(name){
+        return {
+            product : name
+        };
+    }
+}
+```
+
+*create a host file `host.ts` in the same directory as `host.ts` file*
 ```ts
 /** host.ts **/
-import * as path     from 'path'
-import { Host }      from '@hotfusion/micro/classes';
-import { Controller} from '@hotfusion/middlewares'
+
+import * as path         from 'path'
+import { Host, Client }  from '@hotfusion/micro';
+import { Controller}     from '@hotfusion/micro'
 
 const host = new Host();
 
@@ -18,15 +32,22 @@ const controller = new Controller({
 });
 
 host.use(controller.use);
-host.start()
+
+host.start().then(() => {
+      new Client().on('handshake', ({client}) => {
+          client.transaction('Products.buy',{
+              name : 'pepsi'
+          }).then(x => console.log).catch(e => console.error(e));
+      })
+})
 ```
 
-*create controller file `products.controller.ts` in same directory as `host.ts` file*
-```ts
-/** products.controller.ts **/
-export default class Products {
-    public buy(){
-        return true;
-    }
+after all files have been created, open your command prompt and navigate to the 
+directory where `host.ts` and `products.controller.ts` and type `node host`.
+*You should get the response:*
+```json
+{
+   "product": "pepsi"
 }
 ```
+
