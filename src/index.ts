@@ -53,7 +53,7 @@ host.on('mounted' , () => {
             name : 'vadim',
             email : 'k@l.com',
             phone: 514999669,
-            male : true
+
         },7000).then(x => {
             console.log('good',x)
         }).catch(e => console.error(e));

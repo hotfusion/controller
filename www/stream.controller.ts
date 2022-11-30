@@ -1,37 +1,32 @@
-import { type,protection } from "../src/HF";
-
-class Types {
-    @type string(Value){
-    }
-    @type number(Value){
-    }
-    @type boolean(key,value){
-    }
-    @type any(Value){
-    }
-}
+import { firewall } from "../src/HF";
+import { Types }    from "./types";
 
 
 export default class StreamController extends Types {
-    @protection firewall  (event : { socket:any, arguments:any }, { allow, deny })  {
+    @firewall packets (event : { socket:any, arguments:any }, { allow, deny })  {
 
     }
-    protected catalog = {
-        create(name:string,email:string,phone:number):  StreamObject {
-            let obj:StreamObject | any  = {}
-                obj.g = ''
-
+    public catalog = {
+        create<Name extends string>(name:Name) : StreamObject {
             return {
-                name:'vadim',
-                email : 'wdw',
-                date : {
+                test  : '',
+                name  : 'mike',
+                email : '5149996559',
+                date  : {
                     today : new Date()
                 }
-            }
+            } as StreamObject
         },
-        get(s:string) : StreamObject {
-            return
+        find(name:string):StreamObject{
+            return {} as StreamObject
+        },
+        update(_id:objectId) : StreamObject {
+            return {} as StreamObject
+        },
+        remove<T extends objectId>(_id:T):T{
+            return _id;
         }
-
     }
 }
+
+new StreamController()

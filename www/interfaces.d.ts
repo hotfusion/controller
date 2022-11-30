@@ -1,3 +1,5 @@
+type objectId = string
+
 declare interface StreamObject {
     date : {
         today: Date
@@ -6,6 +8,3 @@ declare interface StreamObject {
     email
 }
 
-type a = {
-    a:string
-}

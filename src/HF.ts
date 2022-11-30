@@ -10,11 +10,11 @@ export const type = (target,name) => {
     target._types.push(name);
     return target;
 }
-export const protection = (target,name) => {
-    if(!target._protection)
-        target._protection = [];
+export const firewall = (target,name) => {
+    if(!target._firewall)
+        target._firewall = [];
 
-    target._protection.push(name);
+    target._firewall.push(name);
     return target;
 }
 

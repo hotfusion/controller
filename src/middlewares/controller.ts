@@ -86,21 +86,27 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             //console.log('interfaces',interfaces)
             Object.keys(file.methods).forEach(_path => {
                 let method = file.methods[_path];
-                if(method.accessibility === 'protected'){
+                if(method.accessibility === 'protected' || method.accessibility === 'public'){
                     (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
                         let f = get(controller, _path.split('.').splice(1).join('.'));
                         let errors = [];
+
                         method.params.forEach(x => {
-                            let value = object[x.name]
+                            let value = object[x.name];
+                            if(!value)
+                                console.warn(`Argument property value is missing: [${chalk.red(_path)}]:[${x.name}]`)
                             let types = x.types;
 
                             if(types.length && !_types?.find)
-                                console.error(`Controller method [${chalk.red(_path)}] => [${x.name}:${chalk.yellow(types.join(' | '))}] requires type declaration: @type ${chalk.yellow(types.join(' | '))} : (key,value) => {}`);
+                                console.warn(`Controller method [${chalk.red(_path)}] => [${x.name}:${chalk.yellow(types.join(' | '))}] requires type declaration: @type ${chalk.yellow(types.join(' | '))} : (key,value) => {}`);
                             else
                                 types.forEach(typeName => {
                                     let evaluate = _types.find(y => y === typeName);
                                     if(!evaluate)
-                                        console.error(`Missing type validation [${typeName}] for ${_path}: ${x.name}`);
+                                        evaluate = _types.find(y => y === method.declarations.find(x => x.name === typeName)?.type);
+
+                                    if(!evaluate)
+                                        console.warn(`Missing type validation [${typeName}] for ${_path}: ${x.name}`);
                                     else
                                         try{
                                             controller[evaluate](x.name,value);
@@ -109,6 +115,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                         }
                                 })
                         });
+
                         if(errors.length)
                             return exception({
                                 path   : _path,
@@ -167,6 +174,26 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             });
 
             let parse = (f) => {
+                // TSTypeParameterDeclaration
+                let declarations = f.node?.typeParameters?.params?.map?.(x => ({name:x.name,type:x.constraint?.typeName?.name || x.constraint?.type || x?.type})) || [];
+                declarations = declarations.map(x => {
+                    x.type = ((y) => {
+                        if (y === 'TSStringKeyword')
+                            return 'string';
+                        if (y === 'TSNumberKeyword')
+                            return 'number';
+                        if (y === 'TSBooleanKeyword')
+                            return 'boolean';
+                        if (y === 'TSAnyKeyword')
+                            return 'any';
+                        if (y === 'TSObjectKeyword')
+                            return 'object';
+
+                        return y
+                    })(x.type);
+                    return x;
+                })
+                //console.log(declarations)
                 if(!f?.container?.key?.name && !f?.node?.key)
                     return
 
@@ -231,11 +258,11 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     // if default value was not initiated
                     // method(a:string)
                     if(P.typeAnnotation){
-                        let A = P.typeAnnotation?.typeAnnotation
+                        let A = P.typeAnnotation?.typeAnnotation;
                         meta.params.push({
-                            name    : P?.name,
-                            default : P?.right?.value,
-                            types   : (A?.types?.map?.(x => x?.typeName?.name || x.type) || [A?.elementType?.type || A?.type]).filter(x => x)
+                            name        : P?.name,
+                            default     : P?.right?.value,
+                            types       : (A?.types?.map?.(x => x?.typeName?.name || x.type) || [A?.elementType?.type || A?.typeName?.name || A?.type]).filter(x => x)
                         })
                     }
                     return meta.params;
@@ -261,6 +288,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             return x;
                         }),
                         accessibility : accessibility,
+                        declarations  : declarations,
                         interface     : f.node.returnType?.typeAnnotation?.typeName?.name || f.node.returnType?.typeAnnotation?.type || false
                     };
             }
@@ -273,6 +301,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
             console
                 .info(`${chalk.magenta('controller:')} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
+
 
             return {
                 methods : methods,
