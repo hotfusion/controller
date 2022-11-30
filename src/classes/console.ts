@@ -50,9 +50,9 @@ export class Console {
         console.info(msg)
         return {
             stop(){
-                readline.moveCursor(process.stdout,0, -1)      // moving two lines up
+                /*readline.moveCursor(process.stdout,0, -1)      // moving two lines up
                 readline.cursorTo(process.stdout,0)            // then getting cursor at the begining of the line
-                readline.clearScreenDown(process.stdout)
+                readline.clearScreenDown(process.stdout)*/
             }
         }
     }

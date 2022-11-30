@@ -1,4 +1,4 @@
-
+type ClassTypes = any
 
 export const type = (target,name) => {
     if(!target._types)
@@ -18,6 +18,13 @@ export const firewall = (target,name) => {
 export const alias = (name:string) => {
     return (target) => {
         target.prototype._alias = name;
+        return target
+    }
+}
+
+export const types = (_classTypes:ClassTypes) => {
+    return (target) => {
+        target.prototype._classTypes = _classTypes;
         return target
     }
 }

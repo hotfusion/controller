@@ -1,13 +1,14 @@
-import { firewall, alias } from "../src/HF";
-import { Types }    from "./types";
+import { firewall, alias , types } from "../src/HF";
+import { Types } from "./types";
 
+@types(Types)
 @alias('SC')
-class StreamController extends Types {
+class StreamController {
     @firewall packets (event : { socket:any, arguments:any }, { allow, deny })  {
 
     }
     public catalog = {
-        create<Name extends string>(name:Name) : StreamObject {
+        create(name:string) : StreamObject {
             return {
                 test  : '',
                 name  : 'mike',
@@ -25,6 +26,11 @@ class StreamController extends Types {
         },
         remove<T extends objectId>(_id:T):T{
             return _id;
+        }
+    }
+    public links = {
+        create(){
+
         }
     }
 }

@@ -79,7 +79,12 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
     use(socket,next){
         for(let i = 0; i < this.#files.length; i++){
             let file = this.#files[i];
-            let {_types,_public,_alias} = file.module.prototype, controller = new file.module();
+            let {_types, _classTypes ,_public,_alias} = file.module.prototype, controller = new file.module();
+
+            if(_classTypes)
+                _classTypes = new _classTypes()
+
+
             let interfaces = Object.keys(this.#interfaces).map(filename => {
                 return this.#interfaces[filename]
             });
@@ -91,6 +96,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                         _path = [_alias,_path.split('.').splice(1).join('.')].join('.');
 
                     (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
+
                         let f = get(controller, _path.split('.').splice(1).join('.'));
                         let errors = [];
 
@@ -100,19 +106,19 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 console.warn(`Argument property value is missing: [${chalk.red(_path)}]:[${x.name}]`)
                             let types = x.types;
 
-                            if(types.length && !_types?.find)
+                            if(types.length && !_types?.find && !_classTypes)
                                 console.warn(`Controller method [${chalk.red(_path)}] => [${x.name}:${chalk.yellow(types.join(' | '))}] requires type declaration: @type ${chalk.yellow(types.join(' | '))} : (key,value) => {}`);
                             else
                                 types.forEach(typeName => {
-                                    let evaluate = _types.find(y => y === typeName);
+                                    let evaluate = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
                                     if(!evaluate)
-                                        evaluate = _types.find(y => y === method.declarations.find(x => x.name === typeName)?.type);
+                                        evaluate = _types?.find?.(y => y === method.declarations.find(x => x.name === typeName)?.type);
 
                                     if(!evaluate)
                                         console.warn(`Missing type validation [${typeName}] for ${_path}: ${x.name}`);
                                     else
                                         try{
-                                            controller[evaluate](x.name,value);
+                                            (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
                                         }catch(e){
                                             errors.push(e)
                                         }
