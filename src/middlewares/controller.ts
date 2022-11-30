@@ -78,10 +78,9 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
     }
     use(socket,next){
         let files =  this.#files;
-
         for(let i = 0; i < files.length; i++){
             let file = files[i];
-            let {_types, _classTypes ,_public,_alias} = file.module.prototype,
+            let {_types, _classTypes ,_firewalls,_alias} = file.module.prototype,
                 controller = new file.module();
 
             if(_classTypes)
@@ -94,14 +93,18 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             Object.keys(file.methods).forEach(_path => {
                 let method = file.methods[_path];
                 if(method.accessibility === 'protected' || method.accessibility === 'public'){
+
+                    // can use class alias
                     if(_alias)
                         _path = [_alias,_path.split('.').splice(1).join('.')].join('.');
 
+                    // install transaction
                     (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
-
+                        // get controller method bas on _path
                         let f = get(controller, _path.split('.').splice(1).join('.'));
+                        // store error is any
                         let errors = [];
-
+                        // validate params
                         method.params.forEach(x => {
                             let value = object[x.name];
                             if(!value)
@@ -126,7 +129,29 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                         }
                                 })
                         });
-
+                        // if protected, use firewalls
+                        if(method.accessibility === 'protected'){
+                            if(!_firewalls)
+                                console.error(`method controller required a [firewall] hook since [${_path}] is a protected method`)
+                            else {
+                                for(let i = 0; i < _firewalls.length; i++){
+                                    let name = _firewalls[i];
+                                    await new Promise((x,f) => {
+                                        controller[name]({
+                                            request:socket,
+                                            arguments:object
+                                        },{
+                                            complete  : x,
+                                            exception : f
+                                        })
+                                    })
+                                }
+                            }
+                            _firewalls.forEach(name => {
+                                controller[name]
+                            })
+                        }
+                        // if any errors, throw exception
                         if(errors.length)
                             return exception({
                                 path   : _path,
@@ -329,10 +354,11 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             fs.watch(file.path, (eventType, filename) => {
                 clearTimeout(to);
                 clearTimeout(tp);
+
                 to = setTimeout(() => {
                     if(eventType === 'change')
                         this.#files = getFiles();
-                },2000);
+                },3000);
 
                 tp = setTimeout(() => {
                     console

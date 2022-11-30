@@ -1,15 +1,18 @@
-import { firewall, alias , types } from "../src/HF";
+import { firewall, alias , types, api } from "../src/HF";
 import { Types } from "./types";
+
+declare type Socket = any
+declare type HTTP   = any
 
 @types(Types)
 @alias('SC')
 class StreamController {
     //
-    @firewall packets (event : { socket:any, arguments:any }, { allow, deny })  {
+    @firewall packets (event : { request : Socket | HTTP, arguments:any }, { complete, exception })  {
 
     }
 
-    public catalog = {
+    protected catalog = {
         create(name:string) : StreamObject {
             return {
                 test  : '',

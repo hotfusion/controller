@@ -8,13 +8,19 @@ export const type = (target,name) => {
     return target;
 }
 export const firewall = (target,name) => {
-    if(!target._firewall)
-        target._firewall = [];
+    if(!target._firewalls)
+        target._firewalls = [];
 
-    target._firewall.push(name);
+    target._firewalls.push(name);
     return target;
 }
+export const api = (target,name) => {
+    if(!target._apis)
+        target._apis = [];
 
+    target._apis.push(name);
+    return target;
+}
 export const alias = (name:string) => {
     return (target) => {
         target.prototype._alias = name;
