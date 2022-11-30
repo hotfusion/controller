@@ -1,7 +1,4 @@
-declare class Interface {
-    static public ():any
-    static public(target,name): any
-}
+
 
 export const type = (target,name) => {
     if(!target._types)
@@ -18,35 +15,9 @@ export const firewall = (target,name) => {
     return target;
 }
 
-export default class HF implements Interface {
-    static public (target?:any,name?:string){
-        if(name) {
-
-            return target[name];
-        }
-
-        return (target,name,c) => {
-            if(!target._public)
-                target._public = [];
-
-            target._public.push(name);
-        }
-    }
-    static alias(name){
-        return (target) => {
-            target.prototype._alias = name;
-            return target
-        }
-    }
-    static interface (target?:any,name?:string){
-        if(name)
-            return target[name];
-
-        return (target,name,c) => {
-            if(!target._interfaces)
-                target._interfaces = [];
-
-            target._interfaces.push(name);
-        }
+export const alias = (name:string) => {
+    return (target) => {
+        target.prototype._alias = name;
+        return target
     }
 }

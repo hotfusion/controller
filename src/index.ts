@@ -49,7 +49,7 @@ host.on('exception', (exception) => {
 host.on('mounted' , () => {
     new Client().on('handshake', ({client}) => {
 
-        client.transaction('StreamController.catalog.create',{
+        client.transaction('SC.catalog.create',{
             name : 'vadim',
             email : 'k@l.com',
             phone: 514999669,

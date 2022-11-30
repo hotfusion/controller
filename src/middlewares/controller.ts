@@ -87,6 +87,9 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             Object.keys(file.methods).forEach(_path => {
                 let method = file.methods[_path];
                 if(method.accessibility === 'protected' || method.accessibility === 'public'){
+                    if(_alias)
+                        _path = [_alias,_path.split('.').splice(1).join('.')].join('.');
+
                     (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
                         let f = get(controller, _path.split('.').splice(1).join('.'));
                         let errors = [];

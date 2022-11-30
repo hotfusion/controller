@@ -1,8 +1,8 @@
-import { firewall } from "../src/HF";
+import { firewall, alias } from "../src/HF";
 import { Types }    from "./types";
 
-
-export default class StreamController extends Types {
+@alias('SC')
+class StreamController extends Types {
     @firewall packets (event : { socket:any, arguments:any }, { allow, deny })  {
 
     }
@@ -29,4 +29,4 @@ export default class StreamController extends Types {
     }
 }
 
-new StreamController()
+export default StreamController
