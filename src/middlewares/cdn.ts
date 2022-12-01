@@ -1,5 +1,8 @@
 const download = require('node-downloader-helper').DownloaderHelper, fs = require('fs');
 import MiddlewareFactory from "./index";
+import {utils} from "../classes/utils";
+const mime = require('mime-types')
+
 export class CDN  extends MiddlewareFactory implements MiddleWareInterface {
     readonly #alias
     readonly #link
@@ -25,23 +28,28 @@ export class CDN  extends MiddlewareFactory implements MiddleWareInterface {
         next();
     }
     async install() {
-        let spinner = (<any>console)
-            .spinner(`downloading cdn package: ${this.#link}`);
+        if(fs.existsSync(this.#link)){
+            let spinner = (<any>console)
+                .spinner(`importing local cdn package: [${utils.$toLinuxPath(this.#link)}]`);
 
-        let _file : any
-            = await this.#download(this.#link, __dirname);
+            this.#content
+                = fs.readFileSync(this.#link).toString();
 
-        this.#content
-            = fs.readFileSync(_file.filePath).toString();
+            (<any>console)
+                .info(`import is completed: [${utils.$toLinuxPath(this.#link)}]`);
+        }else {
+            let spinner = (<any>console)
+                .spinner(`downloading cdn package: ${utils.$toLinuxPath(this.#link)}`);
 
-        fs.unlinkSync(_file.filePath);
+            let _file: any
+                = await this.#download(this.#link, __dirname);
 
-        spinner
-            .stop();
+            this.#content = fs.readFileSync(_file.filePath).toString();
+            fs.unlinkSync(_file.filePath);
 
-        (<any>console)
-            .info(`downloading is completed:`, this.#link);
-
+            (<any>console)
+                .info(`downloading is completed:`, utils.$toLinuxPath(this.#link));
+        }
         return this;
     }
     handshake(socket) {
