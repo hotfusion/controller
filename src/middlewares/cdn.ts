@@ -45,6 +45,7 @@ export class CDN  extends MiddlewareFactory implements MiddleWareInterface {
                 = await this.#download(this.#link, __dirname);
 
             this.#content = fs.readFileSync(_file.filePath).toString();
+
             fs.unlinkSync(_file.filePath);
 
             (<any>console)

@@ -85,3 +85,15 @@ client.transaction('Products.buy',{
       }  
 );  
 ```  
+
+
+```ts
+export default class Products {
+    @firewall hook(event : {request,arguments}, response:{complete,exception}){
+
+    }
+    protected  buy(name:string){  
+        return { product : name }; 
+    } 
+}
+```
