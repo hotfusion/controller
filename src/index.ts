@@ -4,14 +4,15 @@ import { resolve } from "path";
 import { Webpack } from "./webpack";
 import {utils} from "./classes/utils";
 
-let cwd : string = resolve(__dirname,'../www');
+let folder = 'admin'
+let cwd : string = resolve(__dirname,'../admin');
 
 let controller = new Controller({
-    source : resolve(__dirname,'../www/**/*.controller.ts')
+    source : resolve(__dirname,'../admin/**/*.controller.ts')
 })
 
 let transformer = new Transformer({
-    source    : resolve(__dirname,'../www/**/*.s.ts'),
+    source    : resolve(__dirname,'../admin/**/*.s.ts'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{
@@ -34,7 +35,7 @@ let transformer = new Transformer({
 
 const { VueLoaderPlugin } = require("vue-loader");
 let VueTransformer = new Transformer({
-    source    : resolve(__dirname,'../www/**/vue.js'),
+    source    : resolve(__dirname,'../admin/**/*.vue.js'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{
@@ -60,7 +61,8 @@ let VueTransformer = new Transformer({
                     let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
                         return utils.$toLinuxPath(m?.request || '').split('/').pop();
                     });
-                    console.info('Vue file updated:', modules.slice(0,modules.findIndex(x => x === 'exportHelper.js'))[0])
+                    let filename = modules.slice(0,modules.findIndex(x => x === 'exportHelper.js'))[0];
+                    console.info(`Vue file updated: ./${filename}`)
                     File.content = content
                 }
             })).content;

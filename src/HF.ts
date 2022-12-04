@@ -1,6 +1,6 @@
 type ClassTypes = any
 
-export const type = (target,name) => {
+export const type     = (target,name) => {
     if(!target._types)
         target._types = [];
 
@@ -14,20 +14,20 @@ export const firewall = (target,name) => {
     target._firewalls.push(name);
     return target;
 }
-export const api = (target,name) => {
+export const api      = (target,name) => {
     if(!target._apis)
         target._apis = [];
 
     target._apis.push(name);
     return target;
 }
-export const alias = (name:string) => {
+export const alias    = (name:string) => {
     return (target) => {
         target.prototype._alias = name;
         return target
     }
 }
-export const types = (_classTypes:ClassTypes) => {
+export const types    = (_classTypes:ClassTypes) => {
     return (target) => {
         target.prototype._classTypes = _classTypes;
         return target

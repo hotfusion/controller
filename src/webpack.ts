@@ -32,7 +32,9 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
             modules    : resolves
         },
         resolve : {
-            alias : _config?.alias?.() || _config?.alias || {},
+            alias : {...(_config?.alias?.() || _config?.alias || {}),
+                "HF" : path.resolve(__dirname,'./browser.js')
+            },
             modules    : resolves,
             extensions : ['.ts','.css','.js','*','.vue', '.json']
         },

@@ -15,5 +15,5 @@
     "rootDir": "./src",
     "outDir": "./dist"
   },
-  "exclude": ["./www"]
+  "exclude": ["./www","./admin"]
 }

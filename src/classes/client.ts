@@ -4,16 +4,23 @@ import {utils} from "./utils";
 
 export class Client extends EventEmitter {
     #connection
-    constructor() {
+    #options
+    constructor(options  = {}) {
         super();
+        this.#options = options;
     }
-    connect(port){
+    update(options = {}){
+        Object.assign(this.#options,options)
+    }
+    async connect(port){
         console.info(`client trying to connect to: http://localhost:${port}`,'connecting')
 
-        this.#connection = io(`http://localhost:${port}`,{
-            timeout      : 5000,
-            reconnection : false
-        });
+        await new Promise(x => setTimeout(x,1000));
+
+        this.#connection = io(`http://localhost:${port}`,Object.assign({
+                reconnection : false
+            },this.#options)
+        );
 
         this.#connection.on('handshake', (event) => {
                 console.info(`connected to: http://localhost:${port}`)
@@ -35,9 +42,16 @@ export class Client extends EventEmitter {
                 this.emit('exception', event);
             }
         );
-
+        this.#connection.on('connect_error', (event) => {
+                this.emit('exception', 'Cant connect to the controller:' + event.message + '. Check the port and host you are trying to connect!');
+            }
+        );
         this.#connection.on('error', (event) => {
                 this.emit('exception', event);
+            }
+        );
+        this.#connection.on('reconnect', (event) => {
+                this.emit('reconnect', event);
             }
         );
     }
