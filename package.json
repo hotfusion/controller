@@ -28,7 +28,12 @@
     "clear-module": "^4.1.2",
     "import-fresh": "^3.3.0",
     "file-type": "^18.0.0",
-    "mime-type": "^4.0.0"
+    "mime-type": "^4.0.0",
+    "vue-loader": "^17.0.1",
+    "vue-template-compiler": "^2.7.14",
+    "html-webpack-plugin": "^5.5.0",
+    "@vue/compiler-sfc": "^3.2.45",
+    "vue": "^3.2.45"
   },
   "scripts": {
     "controller": "node ./dist/index.js"

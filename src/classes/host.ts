@@ -22,7 +22,7 @@ export class Host extends EventEmitter {
     readonly #ssl
     readonly #http
     readonly #io
-    readonly #middles:{callback: IEvent | string, dir?:string | Function}[] = []
+    readonly #middles:{callback: ICallBack | string | string[], dir?:string | Function}[] = []
     readonly #getArguments = (V) => V.toString().match(/\((.*)\)/)[0].split(',')
     constructor() {
         super();
@@ -92,7 +92,8 @@ export class Host extends EventEmitter {
      *           next();
      *       });
      */
-    use(callback: IEvent | string, dir?:string | Function) {
+    use(callback: ICallBack | string | string[], dir?:string | Function) {
+
         this.#middles.push({
             callback  : callback,
             dir       : dir
@@ -107,16 +108,23 @@ export class Host extends EventEmitter {
         for(let i = 0; i < middles.length; i++){
             let {callback,dir} = middles[i];
             await (<any>callback)?.install?.();
-            // if string we assume its a static path
+            await (<any>dir)?.install?.();
+            // if callback type is a string we assume its a static path
             if(typeof callback === 'string')
-                if(dir) {
-                    (<any>console).info(`host watching path: [${utils.$toLinuxPath(path.resolve(dir,'.' + callback))}]`)
+                if(typeof dir === 'string') {
+                    (<any>console).info(`host watching path: [${utils.$toLinuxPath(path.resolve(dir, '.' + callback))}]`)
                     this.#express.use(callback, express.static(dir));
+                }else if(typeof dir === 'function'){
+                    (<any>console).info(`host watching path: [${callback}]`);
+                    this.#express.use(callback, (req,res,next) => {
+                        (<any>dir)(req,res,next);
+                    });
                 }else
                     this.#express.use(express.static(callback));
 
+            // if callback type is a string we assume its an function
             if(typeof callback === 'function') {
-                // for socket use the arguments length should be 2
+                // for socket the arguments length should be 2
                 if ((<any>callback).type === 'socket' || this.#getArguments(callback).length === 2)
                     this.#io.use((socket,next) =>{
                         try{

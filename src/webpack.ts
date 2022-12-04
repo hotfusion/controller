@@ -1,16 +1,20 @@
 import {utils} from "./classes/utils";
+const { VueLoaderPlugin } = require("vue-loader");
+const path = require('path'),
+    TerserPlugin = require('terser-webpack-plugin'),
+    webpack = require('webpack'),
+    fs = require('fs'),
+    htmlWebpackPlugin = require("html-webpack-plugin");
 
-const path = require('path'), TerserPlugin = require('terser-webpack-plugin'), webpack = require('webpack'), fs = require('fs');
 const resolves = [
     path.resolve(__dirname, '../node_modules')
 ];
 
-
-export const Webpack = function({entry,output}){
+export const Webpack = function(_config:{entry:string,output:string,plugins:Function, rules:Function}){
     let filename = utils.$objectId() + '.js';
     let config =  {
         mode   : "development",
-        entry  : entry,
+        entry  : _config.entry,
         target : ['web','es5'],
         cache  : false,
         output : {
@@ -27,13 +31,18 @@ export const Webpack = function({entry,output}){
         resolveLoader  : {
             modules    : resolves
         },
-        resolve: {
+        resolve : {
+            /*alias : {
+                vue$ : path.resolve(__dirname,"../vue/dist/vue.runtime.esm.js"),
+            },*/
             modules    : resolves,
-            extensions : ['.ts','.css','.js'],
-            //plugins    : [new TsconfigPathsPlugin({configFile:path.resolve(__dirname,'../')})]
+            extensions : ['.ts','.css','.js','*','.vue', '.json']
         },
+        plugins: [
+            ...(_config?.plugins?.() || []),
+        ],
         module : {
-            rules: [{
+            rules : [{
                 test   : /\.js$/,
                 use    : {
                     loader : 'babel-loader',
@@ -50,14 +59,14 @@ export const Webpack = function({entry,output}){
             },{
                 test   : /\.ts$/,
                 use    : [{
-                    loader : 'ts-loader',
-                    options: {
-                        onlyCompileBundledFiles: true,
-                        allowTsInNodeModules : true,
-                        transpileOnly: true
+                    loader  : 'ts-loader',
+                    options : {
+                        onlyCompileBundledFiles : true,
+                        allowTsInNodeModules    : true,
+                        transpileOnly           : true
                     }
                 }]
-            }]
+            },...(_config?.rules?.() || [])]
         }
     };
 
@@ -88,7 +97,7 @@ export const Webpack = function({entry,output}){
                     fs.unlinkSync(filePath);
 
                 x({
-                    entry        : entry,
+                    entry        : _config.entry,
                     content      : content,
                     lastModified : lastModified
                 });

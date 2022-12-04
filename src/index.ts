@@ -23,6 +23,31 @@ let transformer = new Transformer({
     }
 });
 
+const { VueLoaderPlugin } = require("vue-loader");
+let VueTransformer = new Transformer({
+    source    : resolve(__dirname,'../www/**/vue.js'),
+    transform : async (File) => {
+        try{
+            File.content = (<any> await Webpack(<any>{
+                entry   : File.path,
+                plugins : () => {
+                    return [new VueLoaderPlugin()]
+                },
+                rules   : () => {
+                    return [{
+                        test   : /\.vue$/,
+                        loader : 'vue-loader',
+                        exclude: /node_modules/
+                    }]
+                }
+            })).content;
+        }catch (e) {
+            console.error(e);
+        }
+        return File;
+    }
+})
+
 let cdns = {
     vue    : new CDN('@vue','https://unpkg.com/vue@3'),
     moment : new CDN('@moment','https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js')
@@ -31,6 +56,7 @@ let cdns = {
 let host = new Host();
 
 host.use(controller.use)
+    .use(VueTransformer.use)
     .use(transformer.use)
     .use(cdns.vue.use)
     .use(cdns.moment.use)
@@ -40,11 +66,11 @@ host.use(controller.use)
 
 //console.log((<any>controller)._types)
 host.on('client', ({connect,exception}) => {
-    connect({})
+    connect({});
 });
 
 host.on('exception', (exception) => {
-    console.error(exception)
+    console.error(exception);
 });
 
 host.on('mounted' , () => {
@@ -53,5 +79,5 @@ host.on('mounted' , () => {
 
 host.use('/', cwd);
 
-host.start(5500);
+host.start(6500);
 
