@@ -1,13 +1,22 @@
 <template>
     <div id="app">
-        this is app
+        <HelloWorld></HelloWorld>
     </div>
 </template>
 
 <script>
-    export default {
-        name : 'app',
-        mounted() {
+    import { Options, Vue } from "vue-class-component";
+    import HelloWorld from "@/vue/com.vue";
+
+    @Options({
+        name : "Home",
+        components : {
+            HelloWorld
+        }
+    })
+    export default class App extends Vue {
+        mounted(){
+
         }
     }
 </script>

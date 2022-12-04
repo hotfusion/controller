@@ -10,15 +10,15 @@ const resolves = [
     path.resolve(__dirname, '../node_modules')
 ];
 
-export const Webpack = function(_config:{entry:string,output:string,plugins:Function, rules:Function}){
-    let filename = utils.$objectId() + '.js';
+export const Webpack = function(_config:{entry:string,output:string,plugins:Function, rules:Function,alias: Function, watch:Function}){
+    let filename = 'HF_' + utils.$objectId() + '.js';
     let config =  {
         mode   : "development",
         entry  : _config.entry,
         target : ['web','es5'],
         cache  : false,
         output : {
-            path : __dirname,
+            path : __dirname + '/_.cache',
             filename  : filename,
             library   : {
                 type  : "umd",
@@ -32,9 +32,7 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
             modules    : resolves
         },
         resolve : {
-            /*alias : {
-                vue$ : path.resolve(__dirname,"../vue/dist/vue.runtime.esm.js"),
-            },*/
+            alias : _config?.alias?.() || _config?.alias || {},
             modules    : resolves,
             extensions : ['.ts','.css','.js','*','.vue', '.json']
         },
@@ -47,7 +45,11 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
                 use    : {
                     loader : 'babel-loader',
                     options: {
-                        compact : true
+                        compact : true,
+                        plugins:  [
+                            ["@babel/plugin-proposal-decorators", {"legacy": true}],
+                            ["@babel/plugin-proposal-class-properties", { "loose": true }]
+                        ]
                     }
                 }
             }, {
@@ -69,32 +71,75 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
             },...(_config?.rules?.() || [])]
         }
     };
+    let Exception = (stats,err,filePath) => {
+        console.log(`webpack config: ${config}`)
+        if (err) {
+            console.error(err.stack || err);
+            if (err.details)
+                return console.error(err.details);
+            return console.error({'unknown' : 'undefined error'});
+        }
 
-    return new Promise((x,f) => {
-        webpack(config,async (err:any,stats) => {
+        const info = stats.toJson();
+        if (stats.hasErrors())
+            return console.error(info.errors);
+
+        if (stats.hasWarnings())
+            console.warn(info.warnings);
+
+        return console.error({'unknown' : 'undefined error'});
+
+    }
+    let compiler = webpack(config);
+    if(_config?.watch)
+        return  compiler.watch({}, (err, stats) => {
+            let filePath = path.resolve(__dirname,`./_.cache/${filename}`);
+
+            // deal with errors
             if (err || stats.hasErrors()) {
-                console.log(config)
-                if (err) {
-                    console.error(err.stack || err);
-                    if (err.details)
-                        return f(err.details);
-                    return;
+                Exception(stats,err,filePath)
+                try{
+                    fs.unlinkSync(filePath);
+                }catch (e) {
+                    console.error(e.message)
                 }
-
-                const info = stats.toJson();
-
-                if (stats.hasErrors())
-                    f(info.errors);
-
-                if (stats.hasWarnings())
-                    console.warn(info.warnings);
-
             }else {
-                let filePath = path.resolve(__dirname,`./${filename}`);
-
                 let lastModified = fs.statSync(filePath).mtimeMs;
                 let content = fs.readFileSync(filePath).toString();
+                try{
                     fs.unlinkSync(filePath);
+                }catch (e) {
+                    console.error(e.message)
+                }
+                _config?.watch?.({
+                    entry        : _config.entry,
+                    content      : content,
+                    lastModified : lastModified
+                })
+            }
+        });
+
+    return new Promise((x,f) => {
+        compiler.run((err, stats) => {
+            let filePath = path.resolve(__dirname,`./_.cache/${filename}`);
+
+            // deal with errors
+            if (err || stats.hasErrors()) {
+                Exception(stats,err,filePath)
+                try{
+                    fs.unlinkSync(filePath);
+                }catch (e) {
+                    console.error(e.message)
+                }
+                f({'Webpack Exception' : 'thrown an error by webpack!'})
+            }else {
+                let lastModified = fs.statSync(filePath).mtimeMs;
+                let content = fs.readFileSync(filePath).toString();
+                try{
+                    fs.unlinkSync(filePath);
+                }catch (e) {
+                    console.error(e.message)
+                }
 
                 x({
                     entry        : _config.entry,

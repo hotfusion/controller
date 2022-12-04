@@ -14,7 +14,8 @@ let transformer = new Transformer({
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{
-                entry : File.path
+                entry : File.path,
+                watch   : ({content}) => File.content = content
             })).content;
         }catch (e) {
             console.error(e);
@@ -31,15 +32,23 @@ let VueTransformer = new Transformer({
             File.content = (<any> await Webpack(<any>{
                 entry   : File.path,
                 plugins : () => {
-                    return [new VueLoaderPlugin()]
+                    return [
+                        new VueLoaderPlugin()
+                    ]
                 },
                 rules   : () => {
                     return [{
                         test   : /\.vue$/,
                         loader : 'vue-loader',
                         exclude: /node_modules/
-                    }]
-                }
+                    }];
+                },
+                alias   : () => {
+                    return {
+                        '@' : cwd
+                    }
+                },
+                watch   : ({content}) => File.content = content
             })).content;
         }catch (e) {
             console.error(e);
