@@ -2,6 +2,7 @@ import { Host, Client } from "./classes";
 import { Transformer, CDN, Controller } from "./middlewares";
 import { resolve } from "path";
 import { Webpack } from "./webpack";
+import {utils} from "./classes/utils";
 
 let cwd : string = resolve(__dirname,'../www');
 
@@ -15,7 +16,14 @@ let transformer = new Transformer({
         try{
             File.content = (<any> await Webpack(<any>{
                 entry : File.path,
-                watch   : ({content}) => File.content = content
+                watch   : ({content,stats}) => { //stats.compiler.models
+                    let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
+                        return utils.$toLinuxPath(m?.request || '').split('/').pop();
+                    });
+                    //console.log(Array.from(stats.compilation.modules.values()))
+                    console.info('View file was updated:',modules[0])
+                    File.content = content
+                }
             })).content;
         }catch (e) {
             console.error(e);
@@ -48,7 +56,13 @@ let VueTransformer = new Transformer({
                         '@' : cwd
                     }
                 },
-                watch   : ({content}) => File.content = content
+                watch   : ({content, stats}) => {
+                    let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
+                        return utils.$toLinuxPath(m?.request || '').split('/').pop();
+                    });
+                    console.info('Vue file updated:', modules.slice(0,modules.findIndex(x => x === 'exportHelper.js'))[0])
+                    File.content = content
+                }
             })).content;
         }catch (e) {
             console.error(e);

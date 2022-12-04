@@ -114,7 +114,8 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
                 _config?.watch?.({
                     entry        : _config.entry,
                     content      : content,
-                    lastModified : lastModified
+                    lastModified : lastModified,
+                    stats        : stats
                 })
             }
         });
@@ -144,7 +145,8 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
                 x({
                     entry        : _config.entry,
                     content      : content,
-                    lastModified : lastModified
+                    lastModified : lastModified,
+                    stats        : stats
                 });
             }
         })
