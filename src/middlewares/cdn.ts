@@ -27,7 +27,8 @@ export class CDN  extends MiddlewareFactory implements MiddleWareInterface {
 
         next();
     }
-    async install() {
+
+    async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
         if(fs.existsSync(this.#link)){
             (<any>console)
                 .info(`importing local cdn package: [${utils.$toLinuxPath(this.#link)}]`);
@@ -53,6 +54,7 @@ export class CDN  extends MiddlewareFactory implements MiddleWareInterface {
         }
         return this;
     }
+
     handshake(socket) {
         return {
 

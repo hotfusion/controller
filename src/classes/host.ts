@@ -107,8 +107,8 @@ export class Host extends EventEmitter {
         let middles = this.#middles;
         for(let i = 0; i < middles.length; i++){
             let {callback,dir} = middles[i];
-            await (<any>callback)?.install?.();
-            await (<any>dir)?.install?.();
+            await (<any>callback)?.install?.(this.#express,this.#io);
+            await (<any>dir)?.install?.(this.#express,this.#io);
             // if callback type is a string we assume its a static path
             if(typeof callback === 'string')
                 if(typeof dir === 'string') {

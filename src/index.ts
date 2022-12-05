@@ -3,6 +3,7 @@ import { Transformer, CDN, Controller } from "./middlewares";
 import { resolve } from "path";
 import { Webpack } from "./webpack";
 import {utils} from "./classes/utils";
+import {Session} from "./classes/session";
 
 let folder = 'admin'
 let cwd : string = resolve(__dirname,'../admin');
@@ -78,9 +79,11 @@ let cdns = {
     moment : new CDN('@moment','https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js')
 }
 
+let session = new Session()
 let host = new Host();
 
 host.use(controller.use)
+    .use(session.use)
     .use(VueTransformer.use)
     .use(transformer.use)
     .use(cdns.vue.use)

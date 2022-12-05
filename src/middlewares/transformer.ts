@@ -4,8 +4,8 @@ import * as glob from 'fast-glob'
 import * as path from "path";
 import * as fs from "fs";
 export class Transformer extends MiddlewareFactory implements MiddleWareInterface{
-    #files:any
-    #transformer:Function
+    readonly #files:any
+    readonly #transformer:Function
     constructor({source,transform}) {
         super();
         this.#transformer = transform;
@@ -38,7 +38,7 @@ export class Transformer extends MiddlewareFactory implements MiddleWareInterfac
         return {};
     }
 
-    async install() {
+    async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
         for(let i = 0 ; i < Object.keys(this.#files).length; i++){
             let name = Object.keys(this.#files)[i];
 
@@ -52,5 +52,5 @@ export class Transformer extends MiddlewareFactory implements MiddleWareInterfac
         }
         return this;
     }
-    
+
 }

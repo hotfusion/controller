@@ -10,7 +10,7 @@ export default class MiddlewareFactory implements MiddleWareInterface{
         (<any>this.use).className = this.constructor.name;
     }
     readonly #getArguments = (V) => V.toString().match(/\((.*)\)/)[0].split(',')
-    async install() {
+    async install(http:HTTPServer, io:SocketIoServer ) {
         return this;
     }
 
@@ -19,6 +19,7 @@ export default class MiddlewareFactory implements MiddleWareInterface{
     }
 
     use(request, respond, next) {
+        next?.();
         return this;
     }
 }

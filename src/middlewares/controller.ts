@@ -198,7 +198,8 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         next();
         return this;
     }
-    async install (){
+
+    async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
         let getFiles = () =>{
             let files = glob.sync([this.#source,'!node_modules'], { dot: true,cwd:this.#cwd }).map(x => path.resolve(this.#cwd,x));
             return files.map(x => {
@@ -347,7 +348,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                 }
             });
         }
-
         this.#files = getFiles();
         this.#files.forEach(file => {
             let to,tp;
@@ -369,6 +369,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
         return this;
     }
+
     handshake(socket) {
         return {
             s : ''
