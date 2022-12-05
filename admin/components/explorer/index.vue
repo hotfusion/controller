@@ -2,15 +2,19 @@
 
     <Layout orientation="horizontal">
         <Layout>
-            <Grid style="width: inherit">
+            <Grid>
                 <columns>
                     <column>A</column>
                     <column>B</column>
+                    <column>C</column>
+                    <column>D</column>
                 </columns>
                 <rows>
                     <row>
                         <cell>A</cell>
                         <cell>B</cell>
+                        <cell>C</cell>
+                        <cell>D</cell>
                     </row>
                 </rows>
             </Grid>
