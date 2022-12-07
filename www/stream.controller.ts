@@ -4,11 +4,13 @@ import { Types } from "./types";
 declare type Socket = any
 declare type HTTP   = any
 
+
+
 @types(Types)
 @alias('SC')
 class StreamController {
     //
-    @firewall packets (event : { request : Socket | HTTP, arguments:any }, { complete, exception })  {
+    @firewall packets (event : { session : Socket | HTTP, arguments:any }, { complete, exception })  {
 
     }
 

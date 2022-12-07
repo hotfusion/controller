@@ -11,6 +11,7 @@ new Client().on('handshake', ({client}) => {
         console.log('good',x)
     }).catch(e => console.error(e));
 
+    //sasa
     console.log('client connected')
 }).on('exception',(event) => {
     console.log('exception',event)

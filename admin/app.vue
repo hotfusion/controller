@@ -6,6 +6,7 @@
     import Explorer from "@/components/explorer"
 
     import {HF, UI, options } from 'HF';
+
     @options({
         components : {
             Explorer

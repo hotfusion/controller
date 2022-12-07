@@ -43,6 +43,6 @@
     "express-socket.io-session": "^1.3.5"
   },
   "scripts": {
-    "controller": "node ./dist/index.js"
+    "controller": "node ./dist/server.js"
   }
 }

@@ -43,7 +43,7 @@ export class Transformer extends MiddlewareFactory implements MiddleWareInterfac
             let name = Object.keys(this.#files)[i];
 
             (<any>console)
-                .log(`transforming file: /${name}`,'compiling');
+                .info(`transforming file: /${name}`);
 
             this.#files[name] = await this.#transformer(this.#files[name]);
 

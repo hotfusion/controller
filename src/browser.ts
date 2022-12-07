@@ -1,4 +1,3 @@
-
 import { Options, Vue, createDecorator } from "vue-class-component";
 import { Client } from "./classes/client";
 
@@ -15,6 +14,9 @@ export class HF extends Vue{
             options.methods['connect'] = (port) => {
                 client.connect(port);
                 client.on('handshake', (e) => {
+                    console
+                        .log(e);
+
                     Method(client);
                 });
             }
@@ -42,8 +44,7 @@ export class HF extends Vue{
             options.methods?.[key]?.(e);
         });
     }
+});
 
-
-})
 export {Options as options, Vue} from "vue-class-component";
-export * as UI from '../../UI/dist'
+export * as UI from '../../UI/dist';

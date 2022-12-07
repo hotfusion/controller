@@ -11,13 +11,14 @@ const resolves = [
 ];
 
 export const Webpack = function(_config:{entry:string,output:string,plugins:Function, rules:Function,alias: Function, watch:Function}){
+
     let filename = 'HF_' + utils.$objectId() + '.js';
-    let config =  {
-        mode   : "development",
-        entry  : _config.entry,
-        target : ['web','es5'],
-        cache  : false,
-        output : {
+    let config  =  {
+        mode    : "development",
+        entry   : _config.entry,
+        target  : ['web','es5'],
+        cache   : false,
+        output  : {
             path : __dirname + '/_.cache',
             filename  : filename,
             library   : {
@@ -38,10 +39,10 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
             modules    : resolves,
             extensions : ['.ts','.css','.js','*','.vue', '.json']
         },
-        plugins: [
+        plugins : [
             ...(_config?.plugins?.() || []),
         ],
-        module : {
+        module  : {
             rules : [{
                 test   : /\.js$/,
                 use    : {
@@ -92,27 +93,32 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
         return console.error({'unknown' : 'undefined error'});
 
     }
-    let compiler = webpack(config);
-    if(_config?.watch)
-        return  compiler.watch({}, (err, stats) => {
-            let filePath = path.resolve(__dirname,`./_.cache/${filename}`);
 
+
+    let compiler = webpack(config);
+
+    /*if(_config?.watch)
+        return compiler.watch({}, (err, stats) => {
+            console.log(err);
+            let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
+            let lastModified = fs.statSync(filePath).mtimeMs;
+            let content      = fs.existsSync(filePath)?fs.readFileSync(filePath).toString():`File was not found:${filename}`;
+            try{
+                fs.unlinkSync(filePath);
+            }catch (e) {
+                console.error(e.message)
+            }
             // deal with errors
-            if (err || stats.hasErrors()) {
-                Exception(stats,err,filePath)
+            if (err || stats.hasErrors())
+                Exception(stats,err,filePath);
+            else {
+
                 try{
                     fs.unlinkSync(filePath);
                 }catch (e) {
                     console.error(e.message)
                 }
-            }else {
-                let lastModified = fs.statSync(filePath).mtimeMs;
-                let content = fs.readFileSync(filePath).toString();
-                try{
-                    fs.unlinkSync(filePath);
-                }catch (e) {
-                    console.error(e.message)
-                }
+
                 _config?.watch?.({
                     entry        : _config.entry,
                     content      : content,
@@ -121,10 +127,13 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
                 })
             }
         });
-
+*/
     return new Promise((x,f) => {
+
         compiler.run((err, stats) => {
+            console.log('run')
             let filePath = path.resolve(__dirname,`./_.cache/${filename}`);
+
 
             // deal with errors
             if (err || stats.hasErrors()) {
