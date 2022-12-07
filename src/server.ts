@@ -9,16 +9,16 @@ let folder = 'admin'
 let cwd : string = resolve(__dirname,'../www');
 
 let controller = new Controller({
-    source : resolve(__dirname,'../www/**/*.controller.ts')
+    source : resolve(cwd,'./**/*.controller.ts')
 })
 
 let transformer = new Transformer({
-    source    : resolve(__dirname,'../www/**/*.s.ts'),
+    source    : resolve(cwd,'./**/*.s.ts'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{
                 entry : File.path,
-                watch   : ({content,stats}) => { //stats.compiler.models
+                watch : ({content,stats}) => { //stats.compiler.models
                     console.log(stats)
                     let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
                         return utils.$toLinuxPath(m?.request || '').split('/').pop();
@@ -37,7 +37,7 @@ let transformer = new Transformer({
 
 const { VueLoaderPlugin } = require("vue-loader");
 let VueTransformer = new Transformer({
-    source    : resolve(__dirname,'../www/**/*.vue.js'),
+    source    : resolve(cwd,'./**/*.vue.js'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{

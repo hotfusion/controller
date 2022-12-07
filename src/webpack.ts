@@ -5,20 +5,24 @@ const path = require('path'),
     webpack = require('webpack'),
     fs = require('fs'),
     htmlWebpackPlugin = require("html-webpack-plugin");
-
+const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 const resolves = [
-    path.resolve(__dirname, '../node_modules')
+    'node_modules',
+    path.resolve(__dirname, '../node_modules'),
+    path.resolve(__dirname, './node_modules')
 ];
 
-export const Webpack = function(_config:{entry:string,output:string,plugins:Function, rules:Function,alias: Function, watch:Function}){
-
+export const Webpack = function(_config:{cwd:string,entry:string,output:string,plugins:Function, rules:Function,alias: Function, watch:Function}){
     let filename = 'HF_' + utils.$objectId() + '.js';
-    let config  =  {
-        mode    : "development",
-        entry   : _config.entry,
-        target  : ['web','es5'],
-        cache   : false,
-        output  : {
+    if(_config.cwd)
+        resolves.push(_config.cwd);
+
+    let config   =  {
+        mode     : "development",
+        entry    : _config.entry,//.replace('.ts','.js'),
+        target   : ['web','es5'],
+        cache    : false,
+        output   : {
             path : __dirname + '/_.cache',
             filename  : filename,
             library   : {
@@ -34,13 +38,20 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
         },
         resolve : {
             alias : {...(_config?.alias?.() || _config?.alias || {}),
-                "HF" : path.resolve(__dirname,'./browser.js')
+                "HF" : path.resolve(__dirname,'./browser.js'),
+                "@hotfusion/micro" : __dirname
             },
+
             modules    : resolves,
-            extensions : ['.ts','.css','.js','*','.vue', '.json']
+            extensions : ['.ts','.css','.js'],//,'*','.vue', '.json'
+            //plugins: [new TsconfigPathsPlugin({ configFile: path.resolve(_config.cwd,"../tsconfig.json")  })]
         },
         plugins : [
             ...(_config?.plugins?.() || []),
+            new webpack.NormalModuleReplacementPlugin(
+                /@hotfusion\/micro/,
+                __dirname + '/browser.js'
+            ),
         ],
         module  : {
             rules : [{
@@ -51,7 +62,7 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
                         compact : true,
                         plugins:  [
                             ["@babel/plugin-proposal-decorators", {"legacy": true}],
-                            ["@babel/plugin-proposal-class-properties", { "loose": true }]
+                            // ["@babel/plugin-proposal-class-properties", { "loose": true }]
                         ]
                     }
                 }
@@ -68,7 +79,7 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
                     options : {
                         onlyCompileBundledFiles : true,
                         allowTsInNodeModules    : true,
-                        transpileOnly           : true
+                        transpileOnly           : false
                     }
                 }]
             },...(_config?.rules?.() || [])]
@@ -91,33 +102,25 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
             console.warn(info.warnings);
 
         return console.error({'unknown' : 'undefined error'});
-
     }
-
 
     let compiler = webpack(config);
 
-    /*if(_config?.watch)
+    if(_config?.watch)
         return compiler.watch({}, (err, stats) => {
-            console.log(err);
+
             let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
             let lastModified = fs.statSync(filePath).mtimeMs;
             let content      = fs.existsSync(filePath)?fs.readFileSync(filePath).toString():`File was not found:${filename}`;
+
             try{
                 fs.unlinkSync(filePath);
             }catch (e) {
-                console.error(e.message)
             }
             // deal with errors
             if (err || stats.hasErrors())
                 Exception(stats,err,filePath);
             else {
-
-                try{
-                    fs.unlinkSync(filePath);
-                }catch (e) {
-                    console.error(e.message)
-                }
 
                 _config?.watch?.({
                     entry        : _config.entry,
@@ -127,16 +130,14 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
                 })
             }
         });
-*/
-    return new Promise((x,f) => {
 
+    return new Promise((x,f) => {
         compiler.run((err, stats) => {
             console.log('run')
             let filePath = path.resolve(__dirname,`./_.cache/${filename}`);
-
-
             // deal with errors
             if (err || stats.hasErrors()) {
+                console.log('error')
                 Exception(stats,err,filePath)
                 try{
                     fs.unlinkSync(filePath);
@@ -160,6 +161,6 @@ export const Webpack = function(_config:{entry:string,output:string,plugins:Func
                     stats        : stats
                 });
             }
-        })
+        });
     })
 }

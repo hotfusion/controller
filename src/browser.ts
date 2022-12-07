@@ -1,13 +1,15 @@
-import { Options, Vue, createDecorator } from "vue-class-component";
+import { createDecorator } from "vue-class-component";
 import { Client } from "./classes/client";
 
-const client = new Client();
-export class HF extends Vue{
-    static client = createDecorator((options:any, key) => {
-    })
+let client;
+export class HF {
+    static client:any  = createDecorator((options:any, key) => {})
 }
 
 (<any>HF.client).on = createDecorator((options:any, key) => {
+    if(!client)
+        client = new Client();
+
     if(key === 'connect') {
         const Method = options.methods['connect'];
         if(Method)
@@ -48,3 +50,4 @@ export class HF extends Vue{
 
 export {Options as options, Vue} from "vue-class-component";
 export * as UI from '../../UI/dist';
+export {Client} from './classes/client';
