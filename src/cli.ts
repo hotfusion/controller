@@ -41,7 +41,7 @@ const controller     = new Controller({
 
 // default transformer
 const transformer    = new Transformer({
-    source    : resolve(cwd,'./**/*.s.ts'),
+    source    : resolve(cwd,'./**/*.script.ts'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{
@@ -66,7 +66,7 @@ const transformer    = new Transformer({
 
 // vue transformer
 const VueTransformer = new Transformer({
-    source    : resolve(cwd,'./**/*.vue.js'),
+    source    : resolve(cwd,'./**/*.vue.ts'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{

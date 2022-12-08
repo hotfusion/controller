@@ -21,10 +21,9 @@ export class Transformer extends MiddlewareFactory implements MiddleWareInterfac
     }
     use(request, respond, next) {
         let name = request.url.split('?').shift().replace('/','');
-
-        if(this.#files[name]) {
+        if(this.#files[name])
             return respond.send(this.#files[name].content);
-        }
+
 
         for(let i = 0 ; i < this.#files.length; i++){
 

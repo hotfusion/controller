@@ -10,16 +10,20 @@ export class HF {
     if(!client)
         client = new Client();
 
-    if(key === 'connect') {
-        const Method = options.methods['connect'];
-        if(Method)
+    if(key === 'connect' && !client._connected) {
+        const callback = options.methods['connect'];
+        if(callback)
             options.methods['connect'] = (port) => {
                 client.connect(port);
                 client.on('handshake', (e) => {
                     console
                         .log(e);
 
-                    Method(client);
+                    if(!client._connected) {
+                        client._connected = true;
+                        callback(client);
+                    }else
+                        options.methods?.['reconnect']?.(client);
                 });
             }
     }
@@ -41,10 +45,10 @@ export class HF {
             reconnectionDelay    : 1000,
             reconnectionDelayMax : 5000,
             reconnectionAttempts : 99999
-        })
-        client.on('reconnect', (e) => {
-            options.methods?.[key]?.(e);
         });
+        /*client.on('reconnect', (e) => {
+            options.methods?.[key]?.(client);
+        });*/
     }
 });
 
