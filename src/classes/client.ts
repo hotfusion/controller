@@ -1,10 +1,15 @@
-import * as EventEmitter from "eventemitter3";
+import { EventEmitter as EE }  from 'eventemitter3';
 import {io} from 'socket.io-client';
 import {utils} from "./utils";
 
+export default class EventEmitter<EventTypes extends string | symbol = string | symbol> extends EE<EventTypes> {
+
+}
 export class Client extends EventEmitter {
-    #connection
-    #options
+    #connection:any
+    readonly #options
+    emit:any
+    on:(path,callback) => any
     constructor(options  = {}) {
         super();
         this.#options = options;

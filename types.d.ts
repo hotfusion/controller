@@ -1,3 +1,4 @@
+
 declare type ICallBack = (request,respond, next:Function) => void
 declare type HTTPServer = any
 declare type SocketIoServer = any

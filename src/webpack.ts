@@ -1,10 +1,7 @@
 import {utils} from "./classes/utils";
 const { VueLoaderPlugin } = require("vue-loader");
-const path = require('path'),
-    TerserPlugin = require('terser-webpack-plugin'),
-    webpack = require('webpack'),
-    fs = require('fs'),
-    htmlWebpackPlugin = require("html-webpack-plugin");
+
+const path = require('path'), TerserPlugin = require('terser-webpack-plugin'), webpack = require('webpack'), fs = require('fs'), htmlWebpackPlugin = require("html-webpack-plugin");
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 const resolves = [
     'node_modules',
@@ -43,7 +40,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
             },
 
             modules    : resolves,
-            extensions : ['.ts','.css','.js'],//,'*','.vue', '.json'
+            extensions : ['.ts','.css','.js','*','.vue', '.json'],//,'*','.vue', '.json'
             //plugins: [new TsconfigPathsPlugin({ configFile: path.resolve(_config.cwd,"../tsconfig.json")  })]
         },
         plugins : [
@@ -62,7 +59,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                         compact : true,
                         plugins:  [
                             ["@babel/plugin-proposal-decorators", {"legacy": true}],
-                            // ["@babel/plugin-proposal-class-properties", { "loose": true }]
+                            ["@babel/plugin-proposal-class-properties", { "loose": true }]
                         ]
                     }
                 }
@@ -79,7 +76,10 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                     options : {
                         onlyCompileBundledFiles : true,
                         allowTsInNodeModules    : true,
-                        transpileOnly           : false
+                        transpileOnly           : true,
+                        compilerOptions         : {
+                            "noEmitOnError": true
+                        }
                     }
                 }]
             },...(_config?.rules?.() || [])]
@@ -133,7 +133,6 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
 
     return new Promise((x,f) => {
         compiler.run((err, stats) => {
-            console.log('run')
             let filePath = path.resolve(__dirname,`./_.cache/${filename}`);
             // deal with errors
             if (err || stats.hasErrors()) {

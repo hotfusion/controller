@@ -1,2 +1,2 @@
 export * from './classes';
-export * from './middlewares'
+export * from './middlewares';

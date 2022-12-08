@@ -1,9 +1,6 @@
-import { Host, Client } from "./classes";
-import { Transformer, CDN, Controller } from "./middlewares";
+import { Host, Transformer, CDN, Controller,Session, utils } from "./index";
 import { resolve } from "path";
 import { Webpack } from "./webpack";
-import { utils }   from "./classes/utils";
-import { Session } from "./classes/session";
 
 let folder = 'admin'
 let cwd : string = resolve(__dirname,'../www');

@@ -50,4 +50,4 @@ export class HF {
 
 export {Options as options, Vue} from "vue-class-component";
 export * as UI from '../../UI/dist';
-export {Client} from './classes/client';
+export { Client } from './classes/client';
