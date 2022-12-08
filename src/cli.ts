@@ -1,25 +1,53 @@
 #!/usr/bin/env node
-const argv = require('minimist')(process.argv.slice(2));
-
-
 import {CDN, Controller, Transformer,Session, Server, Webpack, utils} from "./index";
 import {resolve} from "path";
 import {VueLoaderPlugin} from "vue-loader";
+import * as keypress from 'keypress';
 
-const server = new Server(process.cwd());
+const argv = require('minimist')(
+    process.argv.slice(2)
+);
 
-const controller = new Controller({
-    source : resolve(process.cwd(),'./**/*.controller.ts')
-})
+// make `process.stdin` begin emitting "keypress" events
+keypress(process.stdin);
 
+// listen for the "keypress" event
+process.stdin.on('keypress', function (ch, key) {
+    //console.log('got "keypress"', key);
+    if (key && key.ctrl && key.name == 'x') {
+        process.stdout.write('\x1Bc');
+    }
+
+    if (key && key.ctrl && key.name == 'c') {
+        //process.stdin.pause();
+    }
+});
+
+// define cwd
+if(argv.public?.startsWith('./'))
+    argv.public =  resolve(process.cwd(),argv.public)
+
+if(argv.public?.startsWith('/'))
+    argv.public =  resolve(process.cwd(),'.' + argv.public)
+
+const cwd = argv.public || process.cwd();
+
+// mount server
+const server         = new Server(cwd);
+// controller
+const controller     = new Controller({
+    source : resolve(cwd,'./**/*.controller.ts')
+});
+
+// default transformer
 const transformer    = new Transformer({
-    source    : resolve(process.cwd(),'./**/*.s.ts'),
+    source    : resolve(cwd,'./**/*.s.ts'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{
                 cwd   : process.cwd(),
                 entry : File.path,
-                watch : ({content,stats}) => { //stats.compiler.models
+                watch : argv.watch ? ({content,stats}) => { //stats.compiler.models
                     console.log(stats)
                     let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
                         return utils.$toLinuxPath(m?.request || '').split('/').pop();
@@ -27,7 +55,7 @@ const transformer    = new Transformer({
                     //console.log(Array.from(stats.compilation.modules.values()))
                     console.info('View file was updated:',modules[0])
                     File.content = content
-                }
+                } : false
             })).content;
         }catch (e) {
             console.error(e);
@@ -36,8 +64,9 @@ const transformer    = new Transformer({
     }
 });
 
+// vue transformer
 const VueTransformer = new Transformer({
-    source    : resolve(process.cwd(),'./**/*.vue.js'),
+    source    : resolve(cwd,'./**/*.vue.js'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{
@@ -57,17 +86,17 @@ const VueTransformer = new Transformer({
                 },
                 alias   : () => {
                     return {
-                        '@' : process.cwd()
+                        '@' : cwd
                     }
                 },
-                watch   : ({content, stats}) => {
+                watch   : argv.watch ? ({content, stats}) => {
                     let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
                         return utils.$toLinuxPath(m?.request || '').split('/').pop();
                     });
                     let filename = modules.slice(0,modules.findIndex(x => x === 'exportHelper.js'))[0];
                     console.info(`Vue file updated: ./${filename}`)
                     File.content = content
-                }
+                } : false
             })).content;
         }catch (e) {
             console.error(e);

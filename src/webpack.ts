@@ -22,10 +22,10 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
         cache    : false,
         output   : {
             path : __dirname + '/_.cache',
-            filename  : filename,
-            library   : {
-                type  : "umd",
-                name  : "HF"
+            filename : filename,
+            library  : {
+                type : "umd",
+                name : "HF"
             }
         },
         resolve  : {
@@ -144,21 +144,16 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
             // deal with errors
             if (err || stats.hasErrors()) {
                 exception(stats,err,filePath)
-                f({'Webpack Exception' : 'thrown an error by webpack!'})
-            }else {
-                try{
-                    fs.unlinkSync(filePath);
-                }catch (e) {
-                    console.error(e.message)
-                }
-
-                x({
-                    entry        : _config.entry,
-                    content      : content,
-                    lastModified : lastModified,
-                    stats        : stats
-                });
+                return f({'Webpack Exception' : 'thrown an error by webpack!'})
             }
+
+            return x({
+                entry        : _config.entry,
+                content      : content,
+                lastModified : lastModified,
+                stats        : stats
+            });
+
         });
     })
 }

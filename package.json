@@ -43,7 +43,8 @@
     "express-socket.io-session": "^1.3.5",
     "tsconfig-paths-webpack-plugin": "^4.0.0",
     "typescript": "^4.9.3",
-    "minimist": "^1.2.7"
+    "minimist": "^1.2.7",
+    "keypress": "^0.2.1"
   },
   "scripts": {
     "cli-server" : "node ./dist/server.js",
