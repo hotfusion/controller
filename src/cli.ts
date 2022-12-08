@@ -1,19 +1,23 @@
-import { Host, Transformer, CDN, Controller,Session, utils } from "./index";
-import { resolve } from "path";
-import { Webpack } from "./webpack";
+#!/usr/bin/env node
+const argv = require('minimist')(process.argv.slice(2));
 
-let folder = 'admin'
-let cwd : string = resolve(__dirname,'../www');
 
-let controller = new Controller({
-    source : resolve(cwd,'./**/*.controller.ts')
+import {CDN, Controller, Transformer,Session, Server, Webpack, utils} from "./index";
+import {resolve} from "path";
+import {VueLoaderPlugin} from "vue-loader";
+
+const server = new Server(process.cwd());
+
+const controller = new Controller({
+    source : resolve(process.cwd(),'./**/*.controller.ts')
 })
 
-let transformer = new Transformer({
-    source    : resolve(cwd,'./**/*.s.ts'),
+const transformer    = new Transformer({
+    source    : resolve(process.cwd(),'./**/*.s.ts'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{
+                cwd   : process.cwd(),
                 entry : File.path,
                 watch : ({content,stats}) => { //stats.compiler.models
                     console.log(stats)
@@ -32,12 +36,12 @@ let transformer = new Transformer({
     }
 });
 
-const { VueLoaderPlugin } = require("vue-loader");
-let VueTransformer = new Transformer({
-    source    : resolve(cwd,'./**/*.vue.js'),
+const VueTransformer = new Transformer({
+    source    : resolve(process.cwd(),'./**/*.vue.js'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{
+                cwd     : process.cwd(),
                 entry   : File.path,
                 plugins : () => {
                     return [
@@ -53,7 +57,7 @@ let VueTransformer = new Transformer({
                 },
                 alias   : () => {
                     return {
-                        '@' : cwd
+                        '@' : process.cwd()
                     }
                 },
                 watch   : ({content, stats}) => {
@@ -72,37 +76,12 @@ let VueTransformer = new Transformer({
     }
 })
 
-let cdns = {
-    //vue    : new CDN('@vue','https://unpkg.com/vue@3'),
-    moment : new CDN('@moment','https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js')
-}
-
-let session = new Session()
-let host = new Host();
-
-host.use(controller.use)
-    .use(session.use)
-   // .use(VueTransformer.use)
-    .use(transformer.use)
-    //.use(cdns.vue.use)
-    .use(cdns.moment.use)
-    .use((socket,next) => {
-        next();
-    });
-
-host.on('client', ({connect,exception}) => {
-    connect({});
-});
-
-host.on('exception', (exception) => {
-    console.error(exception);
-});
-
-host.on('mounted' , () => {
-
-});
-
-host.use('/', cwd);
-
-host.start(6500);
-
+server.host({
+    port         : argv?.port || 8080,
+    sessions     : [new Session()],
+    transformers : [transformer,VueTransformer],
+    controllers  : [controller],
+    cdns         : [
+        new CDN('@moment','https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js')
+    ]
+})

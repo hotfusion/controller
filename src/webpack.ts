@@ -4,19 +4,20 @@ const { VueLoaderPlugin } = require("vue-loader");
 const path = require('path'), TerserPlugin = require('terser-webpack-plugin'), webpack = require('webpack'), fs = require('fs'), htmlWebpackPlugin = require("html-webpack-plugin");
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 const resolves = [
-    'node_modules',
-    path.resolve(__dirname, '../node_modules'),
-    path.resolve(__dirname, './node_modules')
+    path.resolve(__dirname, '../node_modules')
 ];
+
 
 export const Webpack = function(_config:{cwd:string,entry:string,output:string,plugins:Function, rules:Function,alias: Function, watch:Function}){
     let filename = 'HF_' + utils.$objectId() + '.js';
     if(_config.cwd)
-        resolves.push(_config.cwd);
+        resolves.push(
+            path.resolve(_config.cwd,'./node_modules')
+        );
 
     let config   =  {
         mode     : "development",
-        entry    : _config.entry,//.replace('.ts','.js'),
+        entry    : _config.entry,
         target   : ['web','es5'],
         cache    : false,
         output   : {
@@ -27,30 +28,22 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                 name  : "HF"
             }
         },
-        optimization   : {
-            minimizer  : [new TerserPlugin({ extractComments: false })],
-        },
-        resolveLoader  : {
-            modules    : resolves
-        },
-        resolve : {
+        resolve  : {
             alias : {...(_config?.alias?.() || _config?.alias || {}),
                 "HF" : path.resolve(__dirname,'./browser.js'),
                 "@hotfusion/micro" : __dirname
             },
-
             modules    : resolves,
-            extensions : ['.ts','.css','.js','*','.vue', '.json'],//,'*','.vue', '.json'
-            //plugins: [new TsconfigPathsPlugin({ configFile: path.resolve(_config.cwd,"../tsconfig.json")  })]
+            extensions : ['.ts','.css','.js','.vue', '.json']
         },
-        plugins : [
+        plugins  : [
             ...(_config?.plugins?.() || []),
             new webpack.NormalModuleReplacementPlugin(
                 /@hotfusion\/micro/,
                 __dirname + '/browser.js'
-            ),
+            )
         ],
-        module  : {
+        module   : {
             rules : [{
                 test   : /\.js$/,
                 use    : {
@@ -83,9 +76,16 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                     }
                 }]
             },...(_config?.rules?.() || [])]
+        },
+        optimization  : {
+            minimizer  : [new TerserPlugin({ extractComments: false })],
+        },
+        resolveLoader : {
+            modules    : resolves
         }
     };
-    let Exception = (stats,err,filePath) => {
+
+    let exception = (stats,err,filePath) => {
         console.log(`webpack config: ${config}`)
         if (err) {
             console.error(err.stack || err);
@@ -119,34 +119,33 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
             }
             // deal with errors
             if (err || stats.hasErrors())
-                Exception(stats,err,filePath);
-            else {
-
+                exception(stats,err,filePath);
+            else
                 _config?.watch?.({
                     entry        : _config.entry,
                     content      : content,
                     lastModified : lastModified,
                     stats        : stats
-                })
-            }
+                });
         });
 
     return new Promise((x,f) => {
         compiler.run((err, stats) => {
-            let filePath = path.resolve(__dirname,`./_.cache/${filename}`);
+            let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
+            let lastModified = fs.statSync(filePath)?.mtimeMs;
+            let content      = fs.readFileSync(filePath)?.toString?.() || `File was not found:${filename}`;
+
+            try {
+                fs.unlinkSync(filePath);
+            } catch (e) {
+                console.error(e.message)
+            }
+
             // deal with errors
             if (err || stats.hasErrors()) {
-                console.log('error')
-                Exception(stats,err,filePath)
-                try{
-                    fs.unlinkSync(filePath);
-                }catch (e) {
-                    console.error(e.message)
-                }
+                exception(stats,err,filePath)
                 f({'Webpack Exception' : 'thrown an error by webpack!'})
             }else {
-                let lastModified = fs.statSync(filePath).mtimeMs;
-                let content = fs.readFileSync(filePath).toString();
                 try{
                     fs.unlinkSync(filePath);
                 }catch (e) {
