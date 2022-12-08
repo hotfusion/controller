@@ -4,4 +4,7 @@ export * from './types/middlewares';
 export const options
 export const UI
 export const HF
-export const Vue
+export declare class Vue {
+     constructor() {
+     }
+}
