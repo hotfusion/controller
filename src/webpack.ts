@@ -15,35 +15,40 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
             path.resolve(_config.cwd,'./node_modules')
         );
 
-    let config   =  {
-        mode     : "development",
-        entry    : _config.entry,
-        target   : ['web','es5'],
-        cache    : false,
-        output   : {
-            path : __dirname + '/_.cache',
-            filename : filename,
-            library  : {
-                type : "umd",
-                name : "HF"
-            }
+    let config    =  {
+         entry    : {
+             default : _config.entry,
+             tools   : path.resolve(__dirname,'./tools.js')
+         },
+         mode     : "development",
+         target   : ['web','es5'],
+         cache    : false,
+         output   : {
+             path              : __dirname + '/_.cache',
+             filename          : '[name].[fullhash:8].js',
+             sourceMapFilename : '[name].[fullhash:8].map',
+             chunkFilename     : '[id].[fullhash:8].js',
+             library  : {
+                 type : "umd",
+                 name : "HF"
+             }
         },
-        resolve  : {
-            alias : {...(_config?.alias?.() || _config?.alias || {}),
+         resolve  : {
+            alias      : {...(_config?.alias?.() || _config?.alias || {}),
                 "HF" : path.resolve(__dirname,'./browser.js'),
                 "@hotfusion/micro" : __dirname
             },
             modules    : resolves,
             extensions : ['.ts','.css','.js','.vue', '.json']
         },
-        plugins  : [
+         plugins  : [
             ...(_config?.plugins?.() || []),
             new webpack.NormalModuleReplacementPlugin(
                 /@hotfusion\/micro/,
                 __dirname + '/browser.js'
             )
         ],
-        module   : {
+         module   : {
             rules : [{
                 test   : /\.js$/,
                 use    : {
@@ -77,15 +82,14 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                 }]
             },...(_config?.rules?.() || [])]
         },
-        optimization  : {
+         optimization  : {
             minimizer  : [new TerserPlugin({ extractComments: false })],
         },
-        resolveLoader : {
+         resolveLoader : {
             modules    : resolves
         }
     };
-
-    let exception = (stats,err,filePath) => {
+    let exception = (stats,err) => {
         console.log(`webpack config: ${config}`)
         if (err) {
             console.error(err.stack || err);
@@ -102,35 +106,33 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
             console.warn(info.warnings);
 
         return console.error({'unknown' : 'undefined error'});
-    }
-
-    let compiler = webpack(config);
+    };
+    let compiler  = webpack(config);
 
     if(_config?.watch)
         return compiler.watch({}, (err, stats) => {
-
-            let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
-            let lastModified = fs.statSync(filePath).mtimeMs;
-            let content      = fs.existsSync(filePath)?fs.readFileSync(filePath).toString():`File was not found:${filename}`;
-
-            try{
-                fs.unlinkSync(filePath);
-            }catch (e) {
-            }
             // deal with errors
             if (err || stats.hasErrors())
-                exception(stats,err,filePath);
-            else
-                _config?.watch?.({
-                    entry        : _config.entry,
-                    content      : content,
-                    lastModified : lastModified,
-                    stats        : stats
-                });
+                return exception(stats,err);
+
+            let filename     = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift()
+            let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
+            let lastModified = fs.statSync(filePath).mtimeMs;
+            let content      = Object.keys(stats.compilation.assets).map(filename => {
+                return fs.readFileSync(path.resolve(__dirname,`./_.cache/${filename}`)).toString()
+            }).join('\n');
+
+            _config?.watch?.({
+                entry        : _config.entry,
+                content      : content,
+                lastModified : lastModified,
+                stats        : stats
+            });
         });
 
     return new Promise((x,f) => {
         compiler.run((err, stats) => {
+            filename = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift()
             let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
             let lastModified = fs.statSync(filePath)?.mtimeMs;
             let content      = fs.readFileSync(filePath)?.toString?.() || `File was not found:${filename}`;
@@ -143,7 +145,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
 
             // deal with errors
             if (err || stats.hasErrors()) {
-                exception(stats,err,filePath)
+                exception(stats,err)
                 return f({'Webpack Exception' : 'thrown an error by webpack!'})
             }
 

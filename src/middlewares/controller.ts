@@ -92,6 +92,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
             Object.keys(file.methods).forEach(_path => {
                 let method = file.methods[_path];
+                console.log(_path,method)
                 if(method.accessibility === 'protected' || method.accessibility === 'public'){
 
                     // can use class alias
@@ -100,6 +101,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
                     // install transaction
                     (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
+
                         // get controller method bas on _path
                         let f = get(controller, _path.split('.').splice(1).join('.'));
                         // store error is any
@@ -249,11 +251,13 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     ) || [];
 
                     // loop back to get the full patch of the classMethod
-                    let parent = f.parentPath, _path = [],accessibility = 'private',ignore = false;
+                    let parent = f.parentPath, _path = [],accessibility = f.node.accessibility || 'private', ignore = false;
+
                     while(true){
                         if(!parent) {
                             break
                         }
+
                         if(parent?.node?.accessibility === 'public' || parent?.node?.accessibility === 'protected')
                             accessibility = parent.node.accessibility
 
