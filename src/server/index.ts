@@ -11,7 +11,8 @@ export class Server {
        port      = 8080,
        controllers = [],
        sessions    = [],
-       transformers= [],
+       transformers = [],
+       middlewares = [],
        cdns        = []
     }){
         if(typeof this.#cwd === 'boolean')
@@ -19,6 +20,16 @@ export class Server {
 
         let host = new Host();
 
+        middlewares.forEach(x => {
+            if(x.map && x.length === 2) {
+                console.log(x)
+                host.use(x[0], x[1])
+            }
+
+            if(typeof x === 'function')
+                host.use(x);
+
+        });
         controllers.forEach(x => host.use(x.use));
         sessions.forEach(x => host.use(x.use))
         transformers.forEach(x => host.use(x.use))

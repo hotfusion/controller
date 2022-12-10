@@ -44,7 +44,8 @@
     "tsconfig-paths-webpack-plugin": "^4.0.0",
     "typescript": "^4.9.3",
     "minimist": "^1.2.7",
-    "keypress": "^0.2.1"
+    "keypress": "^0.2.1",
+    "@hotfusion/ui": "file:../UI/dist"
   },
   "scripts": {
     "cli-server" : "node ./dist/server.js",

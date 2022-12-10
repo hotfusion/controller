@@ -92,7 +92,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
             Object.keys(file.methods).forEach(_path => {
                 let method = file.methods[_path];
-                console.log(_path,method)
                 if(method.accessibility === 'protected' || method.accessibility === 'public'){
 
                     // can use class alias

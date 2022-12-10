@@ -48,7 +48,6 @@ const transformer    = new Transformer({
                 cwd   : process.cwd(),
                 entry : File.path,
                 watch : argv.watch ? ({content,stats}) => { //stats.compiler.models
-                    console.log(stats)
                     let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
                         return utils.$toLinuxPath(m?.request || '').split('/').pop();
                     });
@@ -56,6 +55,42 @@ const transformer    = new Transformer({
                     console.info('View file was updated:',modules[0])
                     File.content = content
                 } : false
+            })).content;
+        }catch (e) {
+            console.error(e);
+        }
+        return File;
+    }
+});
+
+const toolsTransformer    = new Transformer({
+    route     : ['/tools',resolve(__dirname)],
+    source    : resolve(resolve(__dirname,'./tools'),'./**/*.ts'),
+    transform : async (File) => {
+        try{
+            File.content = (<any> await Webpack(<any>{
+                cwd   : process.cwd(),
+                entry : File.path,
+                watch : argv.watch ? ({content,stats}) => { //stats.compiler.models
+                    let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
+                        return utils.$toLinuxPath(m?.request || '').split('/').pop();
+                    });
+                    //console.log(Array.from(stats.compilation.modules.values()))
+                    console.info('View file was updated:',modules[0])
+                    File.content = content
+                } : false,
+                plugins : () => {
+                    return [
+                        new VueLoaderPlugin()
+                    ]
+                },
+                rules   : () => {
+                    return [{
+                        test   : /\.vue$/,
+                        loader : 'vue-loader',
+                        exclude: /node_modules/
+                    }];
+                },
             })).content;
         }catch (e) {
             console.error(e);
@@ -108,8 +143,9 @@ const VueTransformer = new Transformer({
 server.host({
     port         : argv?.port || 8080,
     sessions     : [new Session()],
-    transformers : [transformer,VueTransformer],
+    transformers : [toolsTransformer,transformer,VueTransformer],
     controllers  : [controller],
+    middlewares  : [['/tools',resolve(__dirname,'./tools')]],
     cdns         : [
         new CDN('@moment','https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js')
     ]

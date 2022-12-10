@@ -8,12 +8,12 @@
     "skipLibCheck": true,
     "noEmitHelpers": false,
     "importHelpers": false,
-    "declaration": true,
-    "declarationDir": "./dist/types",
+    /*"declaration": true,
+    "declarationDir": "./dist/types",*/
     "skipDefaultLibCheck": true,
     "pretty": true,
     "rootDir": "./src",
     "outDir": "./dist"
   },
-  "exclude": ["./www","./admin"]
+  "exclude": ["./admin","./src/tools","./dist"]
 }

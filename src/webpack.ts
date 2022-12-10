@@ -18,7 +18,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
     let config    =  {
          entry    : {
              default : _config.entry,
-             tools   : path.resolve(__dirname,'./tools.js')
+             tools   : path.resolve(__dirname,'./tools/index.js')
          },
          mode     : "development",
          target   : ['web','es5'],

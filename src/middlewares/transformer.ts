@@ -6,28 +6,27 @@ import * as fs from "fs";
 export class Transformer extends MiddlewareFactory implements MiddleWareInterface{
     readonly #files:any
     readonly #transformer:Function
-    constructor({source,transform}) {
+    readonly #route;
+    constructor(config:{source,transform,route?:any[]}) {
         super();
-        this.#transformer = transform;
-        this.#files = glob.sync(utils.$toLinuxPath(source.slice(source.indexOf('*'),source.length)), { dot: true, cwd : source.split('*')[0] }).reduce((o,k,i) => {
+        this.#route = config.route;
+        this.#transformer = config.transform;
+        this.#files = glob.sync(utils.$toLinuxPath(config.source.slice(config.source.indexOf('*'),config.source.length)), { dot: true, cwd : config.source.split('*')[0] }).reduce((o,k,i) => {
             o[k] = {
-                dir      : source.split('*')[0].replace(/\\/gi,'/'),
+                dir      : config.source.split('*')[0].replace(/\\/gi,'/'),
                 relative : './' + k,
-                path     : path.resolve(source.split('*')[0],'./' + k).replace(/\\/gi,'/'),
-                content  : fs.readFileSync(path.resolve(source.split('*')[0],'./' + k)).toString()
+                path     : path.resolve(config.source.split('*')[0],'./' + k).replace(/\\/gi,'/'),
+                content  : fs.readFileSync(path.resolve(config.source.split('*')[0],'./' + k)).toString()
             }
             return o
         },{});
     }
     use(request, respond, next) {
         let name = request.url.split('?').shift().replace('/','');
+
+        console.log(request.url,this.#route)
         if(this.#files[name])
             return respond.send(this.#files[name].content);
-
-
-        for(let i = 0 ; i < this.#files.length; i++){
-
-        }
 
         next()
         return this;
@@ -49,6 +48,10 @@ export class Transformer extends MiddlewareFactory implements MiddleWareInterfac
             (<any>console)
                 .info(`transformed successfully: [./${name}]`);
         }
+
+        if(this.#route)
+            http.use(this.#route[0],this.use);
+
         return this;
     }
 
