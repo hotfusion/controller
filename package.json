@@ -45,7 +45,8 @@
     "typescript": "^4.9.3",
     "minimist": "^1.2.7",
     "keypress": "^0.2.1",
-    "@hotfusion/ui": "file:../UI/dist"
+    "@hotfusion/ui": "file:../UI/dist",
+    "mongodb": "^4.12.1"
   },
   "scripts": {
     "cli-server" : "node ./dist/server.js",
