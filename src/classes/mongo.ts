@@ -8,32 +8,46 @@ const client = new MongoClient(url);
 
 export class Mongo {
     #client
-    constructor(schema) {
-
+    readonly #config
+    constructor(config) {
+        this.#config = config;
     }
     async connect(url){
         let instance = new MongoClient(url, { useUnifiedTopology: true });
         this.#client = await instance.connect();
+
+        if(this.#config){
+            let dbs = Object.keys(this.#config.databases);
+            for(let i = 0; i < dbs.length; i++){
+                let x = dbs[i], cols = Object.keys(this.#config.databases[x]);
+                if(!this[x]) this[x] = {};
+                for(let j = 0; j < cols.length; j++){
+                    let y = cols[j];
+                    if(!cols.find((z:any) => z === y))
+                        this[x][y] = this.#client.db(x).createCollection(y);
+                    else
+                        this[x][y] = this.#client.db(x).collection(y)
+                }
+            }
+        }
+
+
         return this;
     }
     getDatabasesList(){
         return this.#client.db().admin().listDatabases();
     }
-    createDatabase(name,collections = {}){
-        if(Object.keys(collections).length === 0)
-            throw new Error(`When creating a database provide a collections schema`);
-
-        let db = this.#client.db(name);
-        Object.keys(collections).forEach(name => {
-             db.createCollection('name');
-        });
-        return db;
-    }
 }
 
-let mongo = new Mongo({});
-mongo.connect('mongodb://localhost:27017').then(async (MongoInstance) => {
-    console.log( MongoInstance.createDatabase('testdb',{
-        col : {}
-    }))
-})
+/*
+let mongo = new Mongo({
+    databases : {
+        crawler : {
+            links : {}
+        }
+    }
+});
+
+mongo.connect('mongodb://localhost:27017').then(async (MongoInstance:Mongo | any ) => {
+    console.log(MongoInstance.crawler.links)
+})*/
