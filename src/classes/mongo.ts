@@ -1,21 +1,32 @@
+type DatabaseName = string
+type ColumnName = string
+export interface DBSchema {
+    [key:DatabaseName] : {
+        [key:ColumnName] : {
+            insert(query)
+            find(query)
+        }
+    }
+}
 const { MongoClient } = require('mongodb');
-// or as an es module:
-// import { MongoClient } from 'mongodb'
+
 
 // Connection URL
 const url = 'mongodb://localhost:27017';
 const client = new MongoClient(url);
 
 export class Mongo {
+    static DBSchema:DBSchema
     #client
     readonly #config
-    constructor(config) {
-        this.#config = config;
+    constructor(DBSchema) {
+        this.#config = {
+            databases : DBSchema
+        };
     }
-    async connect(url){
+    async connect<R extends string, schema extends DBSchema>(url:R): Promise <schema> {
         let instance = new MongoClient(url, { useUnifiedTopology: true });
         this.#client = await instance.connect();
-
         if(this.#config){
             let dbs = Object.keys(this.#config.databases);
             for(let i = 0; i < dbs.length; i++){
@@ -32,7 +43,7 @@ export class Mongo {
         }
 
 
-        return this;
+        return <any>this;
     }
     getDatabasesList(){
         return this.#client.db().admin().listDatabases();

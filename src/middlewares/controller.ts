@@ -105,31 +105,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                         let f = get(controller, _path.split('.').splice(1).join('.'));
                         // store error is any
                         let errors = [];
-                        // validate params
-                        method.params.forEach(x => {
-                            let value = object[x.name];
-                            if(!value)
-                                console.warn(`Argument property value is missing: [${chalk.red(_path)}]:[${x.name}]`)
-                            let types = x.types;
-
-                            if(types.length && !_types?.find && !_classTypes)
-                                console.warn(`Controller method [${chalk.red(_path)}] => [${x.name}:${chalk.yellow(types.join(' | '))}] requires type declaration: @type ${chalk.yellow(types.join(' | '))} : (key,value) => {}`);
-                            else
-                                types.forEach(typeName => {
-                                    let evaluate = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
-                                    if(!evaluate)
-                                        evaluate = _types?.find?.(y => y === method.declarations.find(x => x.name === typeName)?.type);
-
-                                    if(!evaluate)
-                                        console.warn(`Missing type validation [${typeName}] for ${_path}: ${x.name}`);
-                                    else
-                                        try{
-                                            (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
-                                        }catch(e){
-                                            errors.push(e)
-                                        }
-                                })
-                        });
                         // if protected, use firewalls
                         if(method.accessibility === 'protected'){
                             if(!_firewalls)
@@ -137,21 +112,47 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             else {
                                 for(let i = 0; i < _firewalls.length; i++){
                                     let name = _firewalls[i];
-                                    await new Promise((x,f) => {
-                                        controller[name]({
-                                            request:socket,
-                                            arguments:object
-                                        },{
-                                            complete  : x,
-                                            exception : f
+                                    try{
+                                        await new Promise((x,f) => {
+                                            controller[name]({session :socket.handshake.session, method, arguments,socket},{
+                                                complete  : x,
+                                                exception : f
+                                            })
                                         })
-                                    })
+                                    }catch (e) {
+                                        errors.push(e);
+                                    }
+
                                 }
                             }
-                            _firewalls.forEach(name => {
-                                controller[name]
-                            })
                         }
+
+                        // validate params
+                        if(!errors.length)
+                            method.params.forEach(x => {
+                                let value = object[x.name];
+                                if(!value)
+                                    console.warn(`Argument property value is missing: [${chalk.red(_path)}]:[${x.name}]`)
+                                let types = x.types;
+
+                                if(types.length && !_types?.find && !_classTypes)
+                                    console.warn(`Controller method [${chalk.red(_path)}] => [${x.name}:${chalk.yellow(types.join(' | '))}] requires type declaration: @type ${chalk.yellow(types.join(' | '))} : (key,value) => {}`);
+                                else if(_classTypes)
+                                    types.forEach(typeName => {
+                                        let evaluate = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
+                                        if(!evaluate)
+                                            evaluate = _types?.find?.(y => y === method.declarations.find(x => x.name === typeName)?.type);
+
+                                        if(!evaluate)
+                                            console.warn(`Missing type validation [${typeName}] for ${_path}: ${x.name}`);
+                                        else
+                                            try{
+                                                (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
+                                            }catch(e){
+                                                errors.push(e)
+                                            }
+                                    })
+                            });
                         // if any errors, throw exception
                         if(errors.length)
                             return exception({

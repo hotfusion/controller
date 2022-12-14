@@ -23,8 +23,6 @@ export class Transformer extends MiddlewareFactory implements MiddleWareInterfac
     }
     use(request, respond, next) {
         let name = request.url.split('?').shift().replace('/','');
-
-        console.log(request.url,this.#route)
         if(this.#files[name])
             return respond.send(this.#files[name].content);
 
