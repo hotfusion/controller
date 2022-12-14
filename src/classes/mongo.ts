@@ -20,13 +20,13 @@ export interface DBSchema {
         }
     }
 }
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 
 // Connection URL
 const url = 'mongodb://localhost:27017';
 
 export class Mongo extends MongoClient{
-    static DBSchema:DBSchema
+    static ObjectId = ObjectId
     #client
     readonly #config
     constructor(DBSchema) {

@@ -53,7 +53,12 @@ class Helper {
                             interfaces[relative].push({
                                 name  : path.join('.').split('.').shift(),
                                 path  : path.join('.').split('.').splice(1).join('.'),
-                                types : annotation?.types?.map?.(x => x.type) || (annotation?.type?[annotation?.typeName?.name|| annotation.type]:[])
+                                types : (annotation?.types?.map?.(x => x.type) || (annotation?.type?[annotation?.typeName?.name|| annotation.type]:[])).map(x => {
+                                    return {
+                                        x ,
+                                        required : !p.node.optional
+                                    }
+                                })
                             })
                     }
                 }
@@ -143,9 +148,11 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                     console.warn(`Controller method [${chalk.red(_path)}] => [${x.name}:${chalk.yellow(types.join(' | '))}] requires type declaration: @type ${chalk.yellow(types.join(' | '))} : (key,value) => {}`);
                                 else
                                     types.forEach(typeName => {
-                                        let evaluate = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
+                                        let evaluate:string = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
                                         if(!evaluate)
-                                            evaluate = _types?.find?.(y => y === method.declarations.find(x => x.name === typeName)?.type);
+                                            evaluate = _types?.find?.(y => y === method.declarations.find(x =>  x.name === y)?.type);
+                                        if(!evaluate)
+                                            evaluate = method?.declarations?.find?.(x => x.name === typeName)?.type
 
                                         if(!evaluate)
                                             console.warn(`Missing type validation [${typeName}] for ${_path}: ${x.name}`);
@@ -182,8 +189,8 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                     interfaces.forEach(x => set(schema,x.path.split('.'),{}));
 
                                 interfaces.forEach(inter => {
-                                    if(get(value,inter.path) === undefined){
-                                        set(schema,inter.path,null)
+                                    if(get(value,inter.path) === undefined && inter.types[0].required){
+                                        set(schema,inter.path,null);
                                         return console.warn(`Returned object from method [${chalk.yellow(_path)}] is missing property  [${chalk.bold.white(inter.name)}.${chalk.redBright(inter.path)}]`)
                                     }else
                                         set(schema,inter.path,get(value,inter.path))
@@ -234,6 +241,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                 let parse = (f) => {
                     // TSTypeParameterDeclaration
                     let declarations = f.node?.typeParameters?.params?.map?.(x => ({name:x.name,type:x.constraint?.typeName?.name || x.constraint?.type || x?.type})) || [];
+
                     declarations = declarations.map(x => {
                         x.type = ((y) => {
                             if (y === 'TSStringKeyword')
