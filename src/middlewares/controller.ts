@@ -90,6 +90,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                 return this.#interfaces[filename]
             });
 
+
             Object.keys(file.methods).forEach(_path => {
                 let method = file.methods[_path];
                 if(method.accessibility === 'protected' || method.accessibility === 'public'){
@@ -104,7 +105,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                         // get controller method bas on _path
                         let f = get(controller, _path.split('.').splice(1).join('.'));
                         // store error is any
-                        let errors = [];
+                        let errors:{scope : 'firewall' | 'method' | 'type' ,error:any}[] = [];
                         // if protected, use firewalls
                         if(method.accessibility === 'protected'){
                             if(!_firewalls)
@@ -120,7 +121,10 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                             })
                                         })
                                     }catch (e) {
-                                        errors.push(e);
+                                        errors.push({
+                                            error  : e,
+                                            scope  : 'firewall'
+                                        });
                                     }
 
                                 }
@@ -137,7 +141,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
                                 if(types.length && !_types?.find && !_classTypes)
                                     console.warn(`Controller method [${chalk.red(_path)}] => [${x.name}:${chalk.yellow(types.join(' | '))}] requires type declaration: @type ${chalk.yellow(types.join(' | '))} : (key,value) => {}`);
-                                else if(_classTypes)
+                                else
                                     types.forEach(typeName => {
                                         let evaluate = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
                                         if(!evaluate)
@@ -149,15 +153,20 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                             try{
                                                 (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
                                             }catch(e){
-                                                errors.push(e)
+                                                errors.push({
+                                                    scope : 'type',
+                                                    error : {
+                                                        type    : typeName,
+                                                        message : e.message
+                                                    }
+                                                })
                                             }
                                     })
                             });
                         // if any errors, throw exception
                         if(errors.length)
                             return exception({
-                                path   : _path,
-                                errors : errors.map(x => x?.message || x)
+                                path:_path, errors
                             });
 
                         try{
@@ -190,6 +199,14 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             exception({
                                 path   : _path,
                                 errors : ['Exception occurred in controller method, for details see the logs.']
+                            });
+
+                            errors.push({
+                                error : e,
+                                scope : 'method'
+                            })
+                            exception({
+                                path:_path, errors
                             });
                         }
                     })
@@ -332,7 +349,13 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             }),
                             accessibility : accessibility,
                             declarations  : declarations,
-                            interface     : f.node.returnType?.typeAnnotation?.typeName?.name || f.node.returnType?.typeAnnotation?.type || false
+
+                            interface     :
+                                // : Promise<Source>
+                                f.node.returnType?.typeAnnotation?.typeParameters?.params?.[0]?.typeName?.name ||
+                                // : Source
+                                f.node.returnType?.typeAnnotation?.typeName?.name ||
+                                f.node.returnType?.typeAnnotation?.type || false
                         };
                 }
 
