@@ -4,6 +4,7 @@ import * as glob from 'fast-glob'
 import * as path from "path";
 import * as fs from "fs";
 import {utils} from "../classes/utils";
+import {User} from "../classes/user";
 import MiddlewareFactory from "./index";
 import {get,set} from 'lodash';
 const chalk = require('chalk');
@@ -82,11 +83,12 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         this.#interfaces = Helper.getAllInterfaces(this.#cwd);
     }
     use(socket,next){
-        let files =  this.#files;
+
+        let files = this.#files;
         for(let i = 0; i < files.length; i++){
             let file = files[i];
             let {_types, _classTypes ,_firewalls,_alias} = file.module.prototype,
-                controller = new file.module();
+                controller = new file.module(new User(socket));
 
             if(_classTypes)
                 _classTypes = new _classTypes()
@@ -99,7 +101,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             Object.keys(file.methods).forEach(_path => {
                 let method = file.methods[_path];
                 if(method.accessibility === 'protected' || method.accessibility === 'public'){
-
                     // can use class alias
                     if(_alias)
                         _path = [_alias,_path.split('.').splice(1).join('.')].join('.');
@@ -107,7 +108,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     // install transaction
                     (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
 
-                        // get controller method bas on _path
+                        // get controller method from _path
                         let f = get(controller, _path.split('.').splice(1).join('.'));
                         // store error is any
                         let errors:{scope : 'firewall' | 'method' | 'type' ,error:any}[] = [];
@@ -120,7 +121,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                     let name = _firewalls[i];
                                     try{
                                         await new Promise((x,f) => {
-                                            controller[name]({session :socket.handshake.session, method, arguments,socket},{
+                                            controller[name](object,{
                                                 complete  : x,
                                                 exception : f
                                             })
