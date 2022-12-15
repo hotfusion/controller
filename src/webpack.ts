@@ -169,7 +169,6 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                                         if((typeof x === 'string' && fs.existsSync(x)) ||  (x.path && fs.existsSync(x.path))) {
                                             console.info(`[${chalk.cyan(utils.$convertBytes( x.size || fs.statSync(x.path || x).size))}] ${chalk.green( x.path || x)} - ${chalk.gray(x.label || 'File ')}`)
                                         }
-
                                     })
 
                                 },1000)
