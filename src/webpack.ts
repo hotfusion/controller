@@ -111,6 +111,11 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
     let compiler  = webpack(config);
     if(_config?.watch)
         return new Promise((x,f) => {
+            let changedFiles
+            compiler.hooks.watchRun.tap('WatchRun', (comp) => {
+                if (comp.modifiedFiles)
+                    changedFiles = Array.from(comp.modifiedFiles, (file) => file)
+            });
             compiler.watch({}, (err, stats) => {
                 // deal with errors
                 if (err || stats.hasErrors()) {
@@ -147,6 +152,15 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                                         lastModified : lastModified,
                                         stats        : stats
                                     });
+
+                                    console.info(`Files were updated by webpack:`);
+
+                                    changedFiles.forEach(x => {
+                                        if(fs.existsSync(x)) {
+                                            console.info(`[${chalk.cyan(utils.$convertBytes(fs.statSync(x).size))}] ${chalk.green(x)}`)
+                                        }
+                                    })
+
                                 },1000)
                                 bar.stop();
                                 bar._init = false;
