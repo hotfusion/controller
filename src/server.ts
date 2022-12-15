@@ -2,7 +2,7 @@ import { Host, Transformer, CDN, Controller,Session, utils } from "./index";
 import { resolve } from "path";
 import { Webpack } from "./webpack";
 
-let folder = 'admin'
+
 let cwd : string = resolve(__dirname,'../www');
 
 let controller = new Controller({
@@ -16,7 +16,6 @@ let transformer = new Transformer({
             File.content = (<any> await Webpack(<any>{
                 entry : File.path,
                 watch : ({content,stats}) => { //stats.compiler.models
-                    console.log(stats)
                     let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
                         return utils.$toLinuxPath(m?.request || '').split('/').pop();
                     });

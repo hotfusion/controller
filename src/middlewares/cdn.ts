@@ -30,17 +30,14 @@ export class CDN  extends MiddlewareFactory implements MiddleWareInterface {
 
     async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
         if(fs.existsSync(this.#link)){
-            (<any>console)
-                .info(`importing local cdn package: [${utils.$toLinuxPath(this.#link)}]`);
+            // (<any>console).info(`importing local cdn package: [${utils.$toLinuxPath(this.#link)}]`);
 
             this.#content
                 = fs.readFileSync(this.#link).toString();
 
-            (<any>console)
-                .info(`import is completed: [${utils.$toLinuxPath(this.#link)}]`);
+            // (<any>console).info(`import is completed: [${utils.$toLinuxPath(this.#link)}]`);
         }else {
-            let spinner = (<any>console)
-                .info(`downloading cdn package: ${utils.$toLinuxPath(this.#link)}`);
+            // let spinner = (<any>console).info(`downloading cdn package: ${utils.$toLinuxPath(this.#link)}`);
 
             let _file: any
                 = await this.#download(this.#link, __dirname);
@@ -49,8 +46,7 @@ export class CDN  extends MiddlewareFactory implements MiddleWareInterface {
 
             fs.unlinkSync(_file.filePath);
 
-            (<any>console)
-                .info(`downloading is completed:`, utils.$toLinuxPath(this.#link));
+            // (<any>console).info(`downloading is completed:`, utils.$toLinuxPath(this.#link));
         }
         return this;
     }

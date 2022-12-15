@@ -40,7 +40,7 @@ const controller     = new Controller({
 });
 
 // default transformer
-const transformer    = new Transformer({
+const transformer = new Transformer({
     source    : resolve(cwd,'./**/*.script.ts'),
     transform : async (File) => {
         try{
@@ -52,7 +52,7 @@ const transformer    = new Transformer({
                         return utils.$toLinuxPath(m?.request || '').split('/').pop();
                     });
                     //console.log(Array.from(stats.compilation.modules.values()))
-                    console.info('View file was updated:',modules[0])
+                    // console.info('View file was updated:',modules[0])
                     File.content = content
                 } : false
             })).content;
@@ -63,7 +63,7 @@ const transformer    = new Transformer({
     }
 });
 
-const toolsTransformer    = new Transformer({
+const toolsTransformer = new Transformer({
     route     : ['/tools',resolve(__dirname)],
     source    : resolve(resolve(__dirname,'./tools'),'./**/*.ts'),
     transform : async (File) => {
@@ -76,7 +76,7 @@ const toolsTransformer    = new Transformer({
                         return utils.$toLinuxPath(m?.request || '').split('/').pop();
                     });
                     //console.log(Array.from(stats.compilation.modules.values()))
-                    console.info('View file was updated:',modules[0])
+                    //console.info('View file was updated:',modules[0])
                     File.content = content
                 } : false,
                 plugins : () => {
@@ -125,12 +125,12 @@ const VueTransformer = new Transformer({
                     }
                 },
                 watch   : argv.watch ? ({content, stats}) => {
-                    let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
+                    let modules  = Array.from(stats.compilation.modules.values()).map(function(m:any) {
                         return utils.$toLinuxPath(m?.request || '').split('/').pop();
                     });
                     let filename = modules.slice(0,modules.findIndex(x => x === 'exportHelper.js'))[0];
-                    console.info(`Vue file updated: ./${filename}`)
-                    File.content = content
+                    File.content = content;
+
                 } : false
             })).content;
         }catch (e) {

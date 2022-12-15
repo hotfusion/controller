@@ -22,8 +22,6 @@ export const type     = <key extends string, value extends object | any>(target,
 export const firewall = <context extends FirewallContext, callback extends FirewallCallback>(target,name,descriptor:TypedPropertyDescriptor<((Context: context,Callback:callback) => any)>):TypedPropertyDescriptor<((Context: context,Callback:callback) => any)> => {
     if(!target._firewalls)
         target._firewalls = [];
-
-
     target._firewalls.push(name);
     return target;
 }
@@ -44,6 +42,19 @@ export const types    = (_classTypes:ClassTypes) => {
     return (target) => {
         target.prototype._classTypes = _classTypes;
         return target
+    }
+}
+
+export const test = function (...Arguments)  {
+    return (target,name,descriptor) => {
+        if(!target._tests)
+            target._tests = [];
+
+        target._tests.push({
+            className  : target.constructor.name,
+            methodName : name,
+            arguments  : [].slice.call(arguments)
+        });
     }
 }
 

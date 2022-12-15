@@ -8,7 +8,7 @@ const https      = require('https');
 const fs         = require('fs-extra');
 const fg         = require('fast-glob');
 
-
+const os = require('os')
 import * as EventEmitter from 'eventemitter3';
 import {Server} from "socket.io";
 import {IO}     from "./io";
@@ -63,10 +63,18 @@ export class Host extends EventEmitter {
         this.#http.on('listening',
             () => this.emit('listening',this)
         );
-
+        this.#http.on('listening',
+            () => this.#express.emit('listening',this)
+        );
         this.#http.on('error',
             async (error) => this.emit('exception',error)
         );
+        this.#http.on('error',
+            () => this.#express.emit('exception',this)
+        );
+
+        process.stdout.write('\x1Bc');
+        console.info(os.type()+'/'+os.platform(),os.release());
     }
 
     /**
@@ -105,29 +113,41 @@ export class Host extends EventEmitter {
     async start(port:number){
         // start the HTTP server
         let middles = this.#middles;
+        // install all middlewares
+        const bar = (<any>console).progress({
+            scope : 'middlewares'
+        })
+
+        bar.start(middles.length, 0);
+
         for(let i = 0; i < middles.length; i++){
+            bar.update(i+1);
             let {callback,dir} = middles[i];
             try{
+                this.#express.port = this.#io.port = port;
                 await (<any>callback)?.install?.(this.#express,this.#io);
                 await (<any>dir)?.install?.(this.#express,this.#io);
             }catch (e) {
                 console.error('middleware exception:',e);
             }
 
-            // if callback type is a string we assume its a static path
+            // define static directory base on arguments type
+            // host.use('/','./www')
+            // host.use('/',(req,res,next) => {})
+            // host.use('./www')
             if(typeof callback === 'string')
                 if(typeof dir === 'string') {
-                    (<any>console).info(`host watching path: [${utils.$toLinuxPath(path.resolve(dir, '.' + callback))}]`)
+                    // (<any>console).info(`host watching path: [${utils.$toLinuxPath(path.resolve(dir, '.' + callback))}]`)
                     this.#express.use(callback, express.static(dir));
                 }else if(typeof dir === 'function'){
-                    (<any>console).info(`host watching path: [${callback}]`);
+                    //(<any>console).info(`host watching path: [${callback}]`);
                     this.#express.use(callback, (req,res,next) => {
                         (<any>dir)(req,res,next);
                     });
                 }else
                     this.#express.use(express.static(callback));
 
-            // if callback type is a string we assume its an function
+            // if no static define use a io or http middleware
             if(typeof callback === 'function') {
                 // for socket the arguments length should be 2
                 if ((<any>callback).type === 'socket' || this.#getArguments(callback).length === 2)
@@ -150,9 +170,11 @@ export class Host extends EventEmitter {
             }
 
         }
+        bar.stop();
         this.#http.listen(port, () => {
             console.info(chalk.greenBright('server is running at:'), port);
             this.emit('mounted', this);
+            this.#express.emit('mounted', this);
         })
     }
 }

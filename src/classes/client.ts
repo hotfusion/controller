@@ -18,7 +18,7 @@ export class Client extends EventEmitter {
         Object.assign(this.#options,options)
     }
     async connect(port){
-        console.info(`client trying to connect to: http://localhost:${port}`,'connecting')
+        //console.info(`connecting to: http://localhost:${port}`)
 
         await new Promise(x => setTimeout(x,1000));
 
@@ -28,7 +28,7 @@ export class Client extends EventEmitter {
         );
 
         this.#connection.on('handshake', (event) => {
-                console.info(`connected to: http://localhost:${port}`)
+               // console.info(`connected to: http://localhost:${port}`)
                 this.emit('handshake', Object.assign(event || {},{client:this}));
             }
         );

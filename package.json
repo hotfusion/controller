@@ -46,7 +46,8 @@
     "minimist": "^1.2.7",
     "keypress": "^0.2.1",
     "@hotfusion/ui": "file:../UI/dist",
-    "mongodb": "^4.12.1"
+    "mongodb": "^4.12.1",
+    "cli-progress": "^3.11.2"
   },
   "scripts": {
     "cli-server" : "node ./dist/server.js",

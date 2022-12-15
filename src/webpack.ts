@@ -1,12 +1,12 @@
 import {utils} from "./classes/utils";
+const chalk = require('chalk')
+const ProgressPlugin = require('webpack/lib/ProgressPlugin');
 const { VueLoaderPlugin } = require("vue-loader");
-
 const path = require('path'), TerserPlugin = require('terser-webpack-plugin'), webpack = require('webpack'), fs = require('fs'), htmlWebpackPlugin = require("html-webpack-plugin");
 const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
 const resolves = [
     path.resolve(__dirname, '../node_modules')
 ];
-
 
 export const Webpack = function(_config:{cwd:string,entry:string,output:string,plugins:Function, rules:Function,alias: Function, watch:Function}){
     let filename = 'HF_' + utils.$objectId() + '.js';
@@ -107,28 +107,58 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
 
         return console.error({'unknown' : 'undefined error'});
     };
+
     let compiler  = webpack(config);
-
     if(_config?.watch)
-        return compiler.watch({}, (err, stats) => {
-            // deal with errors
-            if (err || stats.hasErrors())
-                return exception(stats,err);
+        return new Promise((x,f) => {
+            compiler.watch({}, (err, stats) => {
+                // deal with errors
+                if (err || stats.hasErrors()) {
+                    return <any>exception(stats, err) || x(true)
+                }
 
-            let filename     = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift()
-            let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
-            let lastModified = fs.statSync(filePath).mtimeMs;
-            let content      = Object.keys(stats.compilation.assets).map(filename => {
-                return fs.readFileSync(path.resolve(__dirname,`./_.cache/${filename}`)).toString()
-            }).join('\n');
+                let filename     = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift()
+                let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
+                let lastModified = fs.statSync(filePath).mtimeMs;
+                let content      = Object.keys(stats.compilation.assets).map(filename => {
+                    return fs.readFileSync(path.resolve(__dirname,`./_.cache/${filename}`)).toString()
+                }).join('\n');
 
-            _config?.watch?.({
-                entry        : _config.entry,
-                content      : content,
-                lastModified : lastModified,
-                stats        : stats
+                if(compiler.__init) {
+                    let bar = (<any>console).progress({
+                        scope : chalk.bold(filename)
+                    });
+                    bar.start(100, 0);
+                    new ProgressPlugin({
+                        profile: true,
+                        handler(percentage){
+                            if(!bar._init){
+                                console.clear();
+                                bar._init = true;
+                                bar.start(100, 0);
+                            }
+                            bar.update(percentage*100);
+                            if((Math.round(percentage*100) === 100)){
+                                setTimeout(() => {
+                                    console.clear();
+                                    _config?.watch?.({
+                                        entry        : _config.entry,
+                                        content      : content,
+                                        lastModified : lastModified,
+                                        stats        : stats
+                                    });
+                                },1000)
+                                bar.stop();
+                                bar._init = false;
+                            }
+                        }
+                    }).apply(compiler);
+                }
+
+                x(true);
+                compiler.__init = true;
             });
-        });
+        })
 
     return new Promise((x,f) => {
         compiler.run((err, stats) => {

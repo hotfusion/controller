@@ -1,8 +1,8 @@
 import stamp from 'console-stamp';
 import * as moment from "moment";
-
+declare const console
 const chalk = require("chalk");
-
+const progress   = require('cli-progress');
 const readline = require('readline');
 
 const rl = readline.createInterface({
@@ -11,6 +11,8 @@ const rl = readline.createInterface({
 });
 export class Console {
     pattern = '⢹⢺⢼⣸⣇⡧⡗⡏'
+    isInstalling = false
+    sync  = []
     constructor() {
         stamp( console , {
             format : ':date(HH:MM:ss.l).grey :label() :msg()',
@@ -30,9 +32,23 @@ export class Console {
                     return this.parse(event.msg)
                 }
             }
-        } );
+        });
 
-        (<any>console).spinner = this.spinner.bind(this);
+        let _error = console.error;
+        let self = this;
+        console.error = function() {
+
+            if(!self.isInstalling)
+                _error.apply({},arguments)
+            else {
+                self.sync.push({
+                    scope : 'error',
+                    args  : [].slice.call(arguments)
+                });
+            }
+        }
+        console.clear = () => process.stdout.write('\x1Bc');
+        console.progress = this.progress.bind(this)
     }
     parse(msg) {
         return msg.split(' ')
@@ -45,15 +61,26 @@ export class Console {
     time(){
         return ['[',moment(new Date()).format('HH:MM:ss.SSS'),']'].join('')
     }
-    spinner(message,label = 'downloading'){
-        let msg = this.parse(message);
-        console.info(msg)
-        return {
-            stop(){
-                /*readline.moveCursor(process.stdout,0, -1)      // moving two lines up
-                readline.cursorTo(process.stdout,0)            // then getting cursor at the begining of the line
-                readline.clearScreenDown(process.stdout)*/
-            }
+    progress(config){
+        this.isInstalling = true;
+        let P =  new progress.SingleBar({
+            format           : 'installing |' + chalk.green('{bar}') + `| {percentage}% || {value}/{total} ${config.scope}`,
+            barCompleteChar  : '\u2588',
+            barIncompleteChar: '\u2591',
+            hideCursor       : true,
+            clearOnComplete  : true
+        }, progress.Presets.shades_classic);
+
+        let _stop = P.stop;
+        P.stop =  () => {
+            this.isInstalling = false;
+            _stop.call(P);
+            setTimeout(() => {
+                this.sync.forEach(x => {
+                    console[x.scope].apply({},x.args)
+                })
+            },500);
         }
+        return P;
     }
 }

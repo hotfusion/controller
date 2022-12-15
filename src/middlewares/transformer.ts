@@ -29,22 +29,16 @@ export class Transformer extends MiddlewareFactory implements MiddleWareInterfac
         next()
         return this;
     }
-
     handshake(socket): {} {
         return {};
     }
-
     async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
         for(let i = 0 ; i < Object.keys(this.#files).length; i++){
             let name = Object.keys(this.#files)[i];
 
-            (<any>console)
-                .info(`transforming file: /${name}`);
-
+            // (<any>console).info(`transforming file: /${name}`);
             this.#files[name] = await this.#transformer(this.#files[name]);
-
-            (<any>console)
-                .info(`transformed successfully: [./${name}]`);
+            // (<any>console).info(`transformed successfully: [./${name}]`);
         }
 
         if(this.#route)

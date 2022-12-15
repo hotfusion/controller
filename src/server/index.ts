@@ -21,10 +21,8 @@ export class Server {
         let host = new Host();
 
         middlewares.forEach(x => {
-            if(x.map && x.length === 2) {
-                console.log(x)
+            if(x.map && x.length === 2)
                 host.use(x[0], x[1])
-            }
 
             if(typeof x === 'function')
                 host.use(x);

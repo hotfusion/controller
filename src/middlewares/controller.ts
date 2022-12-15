@@ -5,6 +5,7 @@ import * as path from "path";
 import * as fs from "fs";
 import {utils} from "../classes/utils";
 import {User} from "../classes/user";
+import {Client} from "../classes/client";
 import MiddlewareFactory from "./index";
 import {get,set} from 'lodash';
 const chalk = require('chalk');
@@ -86,19 +87,18 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         let files = this.#files.filter(x => x.module);
         for(let i = 0; i < files.length; i++){
             let file = files[i];
-            let {_types, _classTypes ,_firewalls,_alias} = file.module.prototype
+            let {_types, _classTypes ,_firewalls ,_alias} = file.module.prototype
 
             let controller;
 
             try {
                 controller = new file.module(new User(socket));
                 if(_classTypes)
-                    _classTypes = new _classTypes()
+                   _classTypes = new _classTypes()
 
                 let interfaces = Object.keys(this.#interfaces).map(filename => {
                     return this.#interfaces[filename]
                 });
-
 
                 Object.keys(file.methods).forEach(_path => {
                     let method = file.methods[_path];
@@ -379,8 +379,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                         }
                     });
 
-                    console
-                        .info(`${chalk.magenta(`controller ${this.#files.length?'updated':'installed'} :`)} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
+                    //console.info(`${chalk.magenta(`controller ${this.#files.length?'updated':'installed'} :`)} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
 
                     return {
                         methods : methods,
@@ -411,12 +410,28 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                 },3000);
 
                 tp = setTimeout(() => {
-                    console
-                        .info(`${chalk.yellow(`controller updating:`)} ${chalk.bold(file.module.name)} - [./${utils.$toLinuxPath(file.path).split('/').pop()}]`);
+                    //console.info(`${chalk.yellow(`controller updating:`)} ${chalk.bold(file.module.name)} - [./${utils.$toLinuxPath(file.path).split('/').pop()}]`);
                 },100)
             });
         });
 
+        // run tests
+        let tests = [];
+        let files = this.#files.filter(x => x.module);
+        for(let i = 0; i < files.length; i++){
+            let file = files[i];
+            tests = [...tests, ...(file.module?.prototype?._tests?.map?.(x => {
+                x.className = file.module?.prototype?._alias || x.className;
+                return x;
+            }) || [])];
+        }
+
+        if(tests.length)
+            http.on('mounted', () => {
+                new Client().connect(io.port).then(client => {
+
+                });
+            });
         return this;
     }
 
