@@ -113,8 +113,10 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
         return new Promise((x,f) => {
             let changedFiles
             compiler.hooks.watchRun.tap('WatchRun', (comp) => {
-                if (comp.modifiedFiles)
+                if (comp.modifiedFiles) {
+                    console.clear();
                     changedFiles = Array.from(comp.modifiedFiles, (file) => file)
+                }
             });
             compiler.watch({}, (err, stats) => {
                 // deal with errors
@@ -136,7 +138,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                     bar.start(100, 0);
                     new ProgressPlugin({
                         profile: true,
-                        handler(percentage){
+                        async handler(percentage){
                             if(!bar._init){
                                 console.clear();
                                 bar._init = true;
@@ -144,7 +146,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                             }
                             bar.update(percentage*100);
                             if((Math.round(percentage*100) === 100)){
-                                setTimeout(() => {
+                                setTimeout(async () => {
                                     console.clear();
                                     _config?.watch?.({
                                         entry        : _config.entry,
@@ -155,10 +157,19 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
 
                                     console.info(`Files were updated by webpack:`);
 
+                                    let entry = path.resolve(__dirname,`./_.cache/${filename}`);
+                                    if(!changedFiles.find(x => path.normalize(_config.entry) === x || path.normalize(_config.entry) === x.path))
+                                        changedFiles.unshift({
+                                            label : 'Entry',
+                                            path  : path.normalize(_config.entry),
+                                            size  : fs.statSync(entry).size
+                                        });
+
                                     changedFiles.forEach(x => {
-                                        if(fs.existsSync(x)) {
-                                            console.info(`[${chalk.cyan(utils.$convertBytes(fs.statSync(x).size))}] ${chalk.green(x)}`)
+                                        if((typeof x === 'string' && fs.existsSync(x)) ||  (x.path && fs.existsSync(x.path))) {
+                                            console.info(`[${chalk.cyan(utils.$convertBytes( x.size || fs.statSync(x.path || x).size))}] ${chalk.green( x.path || x)} - ${chalk.gray(x.label || 'File ')}`)
                                         }
+
                                     })
 
                                 },1000)
