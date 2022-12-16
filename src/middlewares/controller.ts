@@ -378,9 +378,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             parse(path)
                         }
                     });
-
-                    //console.info(`${chalk.magenta(`controller ${this.#files.length?'updated':'installed'} :`)} ${chalk.bold(module.name)} - [./${utils.$toLinuxPath(x).split('/').pop()}]`);
-
                     return {
                         methods : methods,
                         module  : module,
@@ -399,18 +396,26 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         this.#files = getFiles();
         this.#files.forEach(file => {
             let to,tp;
+            let bar = (<any>console).progress();
             fs.watch(file.path, (eventType, filename) => {
-
+                console.clear();
+                bar.start(100, 0);
                 clearTimeout(to);
                 clearTimeout(tp);
-
+                bar.update(30, { filename: file.path.split('\\').pop() })
                 to = setTimeout(() => {
                     if(eventType === 'change')
                         this.#files = getFiles();
-                },3000);
+
+                    bar.update(100);
+                    setTimeout(x => {
+                        bar.stop();
+                        console.info(`${chalk.magenta(`controller ${this.#files.length?'updated':'installed'} :`)} ${chalk.bold(file.module.name)} - [./${utils.$toLinuxPath(file.path).split('/').pop()}]`);
+                    },1000 )
+                },2000);
 
                 tp = setTimeout(() => {
-                    //console.info(`${chalk.yellow(`controller updating:`)} ${chalk.bold(file.module.name)} - [./${utils.$toLinuxPath(file.path).split('/').pop()}]`);
+                    bar.update(40)
                 },100)
             });
         });

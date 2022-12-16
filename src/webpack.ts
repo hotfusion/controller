@@ -107,36 +107,35 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
 
         return console.error({'unknown' : 'undefined error'});
     };
-
     let compiler  = webpack(config);
-    if(_config?.watch)
-        return new Promise((x,f) => {
-            let changedFiles
-            compiler.hooks.watchRun.tap('WatchRun', (comp) => {
-                if (comp.modifiedFiles) {
-                    console.clear();
-                    changedFiles = Array.from(comp.modifiedFiles, (file) => file)
-                }
-            });
-            compiler.watch({}, (err, stats) => {
-                // deal with errors
-                if (err || stats.hasErrors()) {
-                    return <any>exception(stats, err) || x(true)
-                }
+    let watch     = () => {
+        let changedFiles = []
+        compiler.hooks.watchRun.tap('WatchRun', (comp) => {
+            if(!compiler.__init || !comp.modifiedFiles) return;
+                console.clear();
+                changedFiles = Array.from(comp.modifiedFiles, (file) => file)
+        });
 
-                let filename     = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift()
-                let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
-                let lastModified = fs.statSync(filePath).mtimeMs;
-                let content      = Object.keys(stats.compilation.assets).map(filename => {
-                    return fs.readFileSync(path.resolve(__dirname,`./_.cache/${filename}`)).toString()
-                }).join('\n');
+        let bar = (<any>console).progress({
+            scope : chalk.bold(filename)
+        });
+        compiler.watch({}, (err, stats) => {
+            // deal with errors
+            if (err || stats.hasErrors()) {
+                return <any>exception(stats, err)
+            }
 
-                if(compiler.__init) {
-                    let bar = (<any>console).progress({
-                        scope : chalk.bold(filename)
-                    });
-                    bar.start(100, 0);
-                    new ProgressPlugin({
+            let filename     = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift()
+            let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
+            let lastModified = fs.statSync(filePath).mtimeMs;
+            let content      = Object.keys(stats.compilation.assets).map(filename => {
+                return fs.readFileSync(path.resolve(__dirname,`./_.cache/${filename}`)).toString()
+            }).join('\n');
+
+
+            if(compiler.__init) {
+                if(!compiler.bar)
+                    compiler.bar = new ProgressPlugin({
                         profile: true,
                         async handler(percentage){
                             if(!bar._init){
@@ -144,7 +143,9 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                                 bar._init = true;
                                 bar.start(100, 0);
                             }
-                            bar.update(percentage*100);
+                            bar.update(percentage*100,{
+                                filename : ''
+                            });
                             if((Math.round(percentage*100) === 100)){
                                 setTimeout(async () => {
                                     console.clear();
@@ -177,13 +178,19 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                             }
                         }
                     }).apply(compiler);
-                }
 
-                x(true);
-                compiler.__init = true;
-            });
-        })
-
+                bar.start(100, 0);
+            }else {
+                _config?.watch?.({
+                    entry: _config.entry,
+                    content: content,
+                    lastModified: lastModified,
+                    stats: stats
+                });
+            }
+            compiler.__init = true;
+        });
+    }
     return new Promise((x,f) => {
         compiler.run((err, stats) => {
             filename = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift()
@@ -202,6 +209,9 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                 exception(stats,err)
                 return f({'Webpack Exception' : 'thrown an error by webpack!'})
             }
+
+            if(_config?.watch)
+                watch();
 
             return x({
                 entry        : _config.entry,

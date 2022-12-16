@@ -4,7 +4,7 @@ declare const console
 const chalk = require("chalk");
 const progress   = require('cli-progress');
 const readline = require('readline');
-
+const Spinner = require('cli-spinner').Spinner;
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -34,10 +34,8 @@ export class Console {
             }
         });
 
-        let _error = console.error;
-        let self = this;
-        console.error = function() {
-
+        let _error = console.error, self = this;
+        console.error    = function() {
             if(!self.isInstalling)
                 _error.apply({},arguments)
             else {
@@ -47,8 +45,9 @@ export class Console {
                 });
             }
         }
-        console.clear = () => process.stdout.write('\x1Bc');
-        console.progress = this.progress.bind(this)
+        console.clear    = () => process.stdout.write('\x1Bc');
+        console.progress = this.progress.bind(this);
+        console.spinner  = this.spinner.bind(this)
     }
     parse(msg) {
         return msg.split(' ')
@@ -64,7 +63,7 @@ export class Console {
     progress(config){
         this.isInstalling = true;
         let P =  new progress.SingleBar({
-            format           : 'installing |' + chalk.green('{bar}') + `| {percentage}% || {value}/{total} ${config.scope}`,
+            format           : 'installing |' + chalk.green('{bar}') + `| {percentage}% || {value}/{total} || {filename} ${config?.scope || ''}`,
             barCompleteChar  : '\u2588',
             barIncompleteChar: '\u2591',
             hideCursor       : true,
@@ -82,5 +81,13 @@ export class Console {
             },500);
         }
         return P;
+    }
+    spinner(){
+        if(this.isInstalling)
+            return
+        let spinner = new Spinner(chalk.cyan('%s'));
+        spinner.setSpinnerString(this.pattern);
+        spinner.start();
+        return spinner
     }
 }

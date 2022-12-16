@@ -121,7 +121,10 @@ export class Host extends EventEmitter {
         bar.start(middles.length, 0);
 
         for(let i = 0; i < middles.length; i++){
-            bar.update(i+1);
+            bar.update(i+1,{
+                filename : ''
+            });
+
             let {callback,dir} = middles[i];
             try{
                 this.#express.port = this.#io.port = port;
