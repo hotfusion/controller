@@ -74,7 +74,7 @@ export class Host extends EventEmitter {
         );
 
         process.stdout.write('\x1Bc');
-        console.info(os.type()+'/'+os.platform(),os.release());
+        console.info(chalk.bgBlue(chalk.white('TS')),os.type()+'/'+os.platform(),os.release());
     }
 
     /**

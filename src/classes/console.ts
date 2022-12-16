@@ -82,10 +82,10 @@ export class Console {
         }
         return P;
     }
-    spinner(){
+    spinner(msg){
         if(this.isInstalling)
             return
-        let spinner = new Spinner(chalk.cyan('%s'));
+        let spinner = new Spinner(chalk.cyan(`${msg} %s`));
         spinner.setSpinnerString(this.pattern);
         spinner.start();
         return spinner

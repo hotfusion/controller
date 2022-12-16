@@ -76,6 +76,8 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
     readonly #source
     readonly #cwd
     readonly #interfaces = {}
+    #http
+    #io
     constructor({source}) {
         super();
 
@@ -114,9 +116,9 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             // store error is any
                             let errors:{scope : 'firewall' | 'method' | 'type' ,error:any}[] = [];
                             // if protected, use firewalls
-                            if(method.accessibility === 'protected'){
+                            if(method.accessibility === 'protected')
                                 if(!_firewalls)
-                                    console.error(`method controller required a [firewall] hook since [${_path}] is a protected method`)
+                                    console.error(`method controller required a [firewall] hook since [${_path}] is a protected method controller`)
                                 else {
                                     for(let i = 0; i < _firewalls.length; i++){
                                         let name = _firewalls[i];
@@ -136,18 +138,30 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
                                     }
                                 }
-                            }
+
 
                             // validate params
                             if(!errors.length)
                                 method.params.forEach(x => {
                                     let value = object[x.name];
                                     if(!value)
-                                        console.warn(`Argument property value is missing: [${chalk.red(_path)}]:[${x.name}]`)
-                                    let types = x.types;
+                                        errors.push({
+                                            scope : 'type',
+                                            error : {
+                                                type    : 'noType',
+                                                message : `Argument value [${chalk.red(_path)}]:[${x.name}] required in arguments`
+                                            }
+                                        });
 
+                                    let types = x.types;
                                     if(types.length && !_types?.find && !_classTypes)
-                                        console.warn(`Controller method [${chalk.red(_path)}] => [${x.name}:${chalk.yellow(types.join(' | '))}] requires type declaration: @type ${chalk.yellow(types.join(' | '))} : (key,value) => {}`);
+                                        errors.push({
+                                            scope : 'type',
+                                            error : {
+                                                type    : `noType`,
+                                                message : `Controller method [${_path}] => [${x.name}:${types.join(' | ')}] requires type declaration: @type ${types.join(' | ')} : (key,value) => {}`
+                                            }
+                                        })
                                     else
                                         types.forEach(typeName => {
                                             let evaluate:string = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
@@ -157,7 +171,13 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                                 evaluate = method?.declarations?.find?.(x => x.name === typeName)?.type
 
                                             if(!evaluate)
-                                                console.warn(`Missing type validation [${typeName}] for ${_path}: ${x.name}`);
+                                                errors.push({
+                                                    scope : 'type',
+                                                    error : {
+                                                        type    : typeName,
+                                                        message : `Missing type validation [${typeName}] for ${_path}: ${x.name}`
+                                                    }
+                                                })
                                             else
                                                 try{
                                                     (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
@@ -172,6 +192,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                                 }
                                         })
                                 });
+
                             // if any errors, throw exception
                             if(errors.length)
                                 return exception({
@@ -193,7 +214,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                     interfaces.forEach(inter => {
                                         if(get(value,inter.path) === undefined && inter.types[0].required){
                                             set(schema,inter.path,null);
-                                            return console.warn(`Returned object from method [${chalk.yellow(_path)}] is missing property  [${chalk.bold.white(inter.name)}.${chalk.redBright(inter.path)}]`)
+                                            console.warn(`Returned object from method [${_path}] is missing property  [${inter.name}.${inter.path}]`)
                                         }else
                                             set(schema,inter.path,get(value,inter.path))
                                     })
@@ -231,6 +252,8 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
     }
 
     async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
+        this.#http = http;
+        this.#io   = io;
         let getFiles = () =>{
             let files = glob.sync([this.#source,'!node_modules'], { dot: true,cwd:this.#cwd }).map(x => path.resolve(this.#cwd,x));
             return files.map(x => {
@@ -411,6 +434,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     setTimeout(x => {
                         bar.stop();
                         console.info(`${chalk.magenta(`controller ${this.#files.length?'updated':'installed'} :`)} ${chalk.bold(file.module.name)} - [./${utils.$toLinuxPath(file.path).split('/').pop()}]`);
+                        this.test();
                     },1000 )
                 },2000);
 
@@ -419,7 +443,11 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                 },100)
             });
         });
+        http.on('mounted', () => this.test())
+        return this;
+    }
 
+    test(){
         // run tests
         let tests = [];
         let files = this.#files.filter(x => x.module);
@@ -431,15 +459,26 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             }) || [])];
         }
 
-        if(tests.length)
-            http.on('mounted', () => {
-                new Client().connect(io.port).then(client => {
-
+        if(tests.length) {
+            console.info(chalk.bold(`automated tests [${chalk.cyan(tests.length)}]`));
+            let spinner = (<any>console).spinner(`creating virtual client`);
+            setTimeout(() => {
+                let client = new Client();
+                    client.connect(this.#io.port).then(async () => {
+                    spinner.stop(true);
+                    console.info(chalk.bold('virtual client is ready'));
+                    for(let i = 0 ; i < tests.length; i++){
+                        console.info(chalk.yellow(`controller:`),tests[i].className + '.' + tests[i].methodName, chalk.blueBright(JSON.stringify(tests[i].arguments[0])));
+                        try{
+                            console.info(chalk.cyanBright(`output:`),await client.transaction([tests[i].className,tests[i].methodName].join('.'),tests[i].arguments[0]));
+                        }catch (e) {
+                            console.error(e.errors)
+                        }
+                    }
                 });
-            });
-        return this;
+            },200);
+        }
     }
-
     handshake(socket) {
         return {
             s : ''
