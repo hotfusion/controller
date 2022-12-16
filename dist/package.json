@@ -1,6 +1,6 @@
 {
-  "name": "@hotfusion/micro",
-  "version": "1.0.3",
+  "name": "@hotfusion/service",
+  "version": "1.0.1",
   "types": "./types.d.ts",
   "main": "./index.js",
   "bin": {
@@ -46,6 +46,11 @@
     "vue-loader": "^17.0.1",
     "vue-template-compiler": "^2.7.14",
     "webpack": "^5.75.0",
-    "webpack-watcher": "^0.2.3"
+    "webpack-watcher": "^0.2.3",
+    "typescript": "^4.9.3",
+    "minimist": "^1.2.7",
+    "keypress": "^0.2.1",
+    "mongodb": "^4.12.1",
+    "cli-progress": "^3.11.2"
   }
 }

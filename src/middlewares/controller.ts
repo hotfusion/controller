@@ -254,11 +254,11 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
     async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
         this.#http = http;
         this.#io   = io;
-        let getFiles = () =>{
+        let getFiles = (bar?:any) =>{
             let files = glob.sync([this.#source,'!node_modules'], { dot: true,cwd:this.#cwd }).map(x => path.resolve(this.#cwd,x));
             return files.map(x => {
                 try{
-                    clearModule(x.replace('.ts','.js'))
+                    clearModule(x.replace('.ts','.js'));
                     let module  = require(x.replace('.ts','.js')).default
                     let methods = {}
                     let code    = fs.readFileSync(x).toString();
@@ -407,29 +407,43 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                         path    : x
                     }
                 }catch (e) {
-                    console.error('controller exception:',e);
                     return {
                         methods : {},
                         module  : false,
-                        path    : x
+                        path    : x,
+                        error   : e
                     }
                 }
             });
         }
+        let bar = (<any>console).progress();
         this.#files = getFiles();
+        this.#files.forEach(x => {
+            if(x.error)
+                console.error('controller exception:', x.error);
+        })
+
         this.#files.forEach(file => {
             let to,tp;
-            let bar = (<any>console).progress();
             fs.watch(file.path, (eventType, filename) => {
-                console.clear();
+                process.stdout.write('\x1Bc')
                 bar.start(100, 0);
                 clearTimeout(to);
                 clearTimeout(tp);
                 bar.update(30, { filename: file.path.split('\\').pop() })
                 to = setTimeout(() => {
                     if(eventType === 'change')
-                        this.#files = getFiles();
+                        this.#files = getFiles(bar);
 
+                    let isError = false;
+                    this.#files.forEach(x => {
+                        if(x.error) {
+                            isError = true;
+                            bar?.stop?.();
+                            console.error('controller exception:', x.error);
+                        }
+                    })
+                    if(isError) return;
                     bar.update(100);
                     setTimeout(x => {
                         bar.stop();
@@ -461,21 +475,20 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
         if(tests.length) {
             console.info(chalk.bold(`automated tests [${chalk.cyan(tests.length)}]`));
-            let spinner = (<any>console).spinner(`creating virtual client`);
+            (<any>console).info(`creating virtual client`);
             setTimeout(() => {
                 let client = new Client();
                     client.connect(this.#io.port).then(async () => {
-                    spinner.stop(true);
-                    console.info(chalk.bold('virtual client is ready'));
-                    for(let i = 0 ; i < tests.length; i++){
-                        console.info(chalk.yellow(`controller:`),tests[i].className + '.' + tests[i].methodName, chalk.blueBright(JSON.stringify(tests[i].arguments[0])));
-                        try{
-                            console.info(chalk.cyanBright(`output:`),await client.transaction([tests[i].className,tests[i].methodName].join('.'),tests[i].arguments[0]));
-                        }catch (e) {
-                            console.error(e.errors)
+                        console.info(chalk.bold('virtual client is ready'));
+                        for(let i = 0 ; i < tests.length; i++){
+                            console.info(chalk.yellow(`controller:`),tests[i].className + '.' + tests[i].methodName, chalk.blueBright(JSON.stringify(tests[i].arguments[0])));
+                            try{
+                                console.info(chalk.cyanBright(`output:`),await client.transaction([tests[i].className,tests[i].methodName].join('.'),tests[i].arguments[0]));
+                            }catch (e) {
+                                console.error(e.errors)
+                            }
                         }
-                    }
-                });
+                    });
             },200);
         }
     }

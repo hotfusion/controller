@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import {CDN, Controller, Transformer,Session, Server, Webpack, utils} from "./index";
+import {CDN, Controller, Transformer,Session, Server, utils} from "./index";
+import {Webpack} from "./webpack";
 import {resolve} from "path";
 import {VueLoaderPlugin} from "vue-loader";
 import * as keypress from 'keypress';
@@ -63,9 +64,10 @@ const transformer = new Transformer({
     }
 });
 
+/*
 const toolsTransformer = new Transformer({
     route     : ['/tools',resolve(__dirname)],
-    source    : resolve(resolve(__dirname,'./tools'),'./**/*.ts'),
+    source    : resolve(resolve(__dirname,'./tools'),'./!**!/!*.ts'),
     transform : async (File) => {
         try{
             File.content = (<any> await Webpack(<any>{
@@ -98,6 +100,7 @@ const toolsTransformer = new Transformer({
         return File;
     }
 });
+*/
 
 // vue transformer
 const VueTransformer = new Transformer({
@@ -143,9 +146,9 @@ const VueTransformer = new Transformer({
 server.host({
     port         : argv?.port || 8080,
     sessions     : [new Session()],
-    transformers : [toolsTransformer,transformer,VueTransformer],
+    //transformers : [transformer,VueTransformer],
     controllers  : [controller],
-    middlewares  : [['/tools',resolve(__dirname,'./tools')]],
+   // middlewares  : [['/tools',resolve(__dirname,'./tools')]],
     cdns         : [
         new CDN('@moment','https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js')
     ]

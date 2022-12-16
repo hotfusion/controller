@@ -9,9 +9,9 @@ const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
 });
+let busy = false
 export class Console {
     pattern = '⢹⢺⢼⣸⣇⡧⡗⡏'
-    isInstalling = false
     sync  = []
     constructor() {
         stamp( console , {
@@ -35,19 +35,34 @@ export class Console {
         });
 
         let _error = console.error, self = this;
-        console.error    = function() {
-            if(!self.isInstalling)
-                _error.apply({},arguments)
-            else {
+
+        let C = {};
+        ['error','log','warn','info'].forEach((x) => {
+            C[x] = console[x];
+            console[x] = function () {
                 self.sync.push({
-                    scope : 'error',
-                    args  : [].slice.call(arguments)
-                });
+                    scope : x , args : [].slice.call(arguments)
+                })
             }
-        }
-        console.clear    = () => process.stdout.write('\x1Bc');
-        console.progress = this.progress.bind(this);
-        console.spinner  = this.spinner.bind(this)
+        });
+
+        setInterval(() => {
+            if(busy) return;
+            let log = this.sync.shift();
+            if(log?.scope === 'clear')
+                return process.stdout.write('\x1Bc')
+
+            if(log?.scope === 'error')
+                return setTimeout(() => {
+                    C[log.scope].apply(C[log.scope],log.args);
+                },1000);
+            if(log)
+                C[log.scope].apply(C[log.scope],log.args);
+
+        },30);
+
+        console.clear    = () => this.sync.push({scope:'clear'});
+        console.progress = this.progress
     }
     parse(msg) {
         return msg.split(' ')
@@ -61,7 +76,6 @@ export class Console {
         return ['[',moment(new Date()).format('HH:MM:ss.SSS'),']'].join('')
     }
     progress(config){
-        this.isInstalling = true;
         let P =  new progress.SingleBar({
             format           : 'installing |' + chalk.green('{bar}') + `| {percentage}% || {value}/{total} || {filename} ${config?.scope || ''}`,
             barCompleteChar  : '\u2588',
@@ -70,24 +84,23 @@ export class Console {
             clearOnComplete  : true
         }, progress.Presets.shades_classic);
 
-        let _stop = P.stop;
+        let _stop = P.stop,_start = P.start,_update = P.update;
+        P.start = (a,b) => {
+            process.stdout.write('\x1Bc')
+            busy = true
+            _start.call(P,a,b);
+        }
+        P.update = (a,b) => {
+            busy = true
+            _update.call(P,a,b)
+        }
         P.stop =  () => {
-            this.isInstalling = false;
+            process.stdout.write('\x1Bc');
             _stop.call(P);
             setTimeout(() => {
-                this.sync.forEach(x => {
-                    console[x.scope].apply({},x.args)
-                })
-            },500);
+                busy = false;
+            },300)
         }
         return P;
-    }
-    spinner(msg){
-        if(this.isInstalling)
-            return
-        let spinner = new Spinner(chalk.cyan(`${msg} %s`));
-        spinner.setSpinnerString(this.pattern);
-        spinner.start();
-        return spinner
     }
 }

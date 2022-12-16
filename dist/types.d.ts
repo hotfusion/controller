@@ -9,6 +9,6 @@ export const UI
 
 export const options
 export declare class Vue {
-     constructor() {}
+
 }
 
