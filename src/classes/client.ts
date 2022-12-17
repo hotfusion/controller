@@ -25,10 +25,7 @@ export class Client extends EventEmitter {
             },this.#options)
         );
 
-        this.#connection.on('handshake', (event) => {
-                this.emit('handshake', Object.assign(event || {},{client:this}));
-            }
-        );
+
 
         this.#connection.on('disconnect', (event) => {
                 this.emit('disconnect', event);
@@ -56,6 +53,13 @@ export class Client extends EventEmitter {
                 this.emit('reconnect', event);
             }
         );
+        return await new Promise(x => {
+            this.#connection.on('handshake', (event) => {
+                    this.emit('handshake', event || {});
+                    x(event || {})
+                }
+            );
+        })
     }
     transaction(ChannelName:string,VanillaObject,timeout?:number){
         return new Promise((x,f) => {
@@ -69,7 +73,11 @@ export class Client extends EventEmitter {
                 if(data.error)
                     return f(data.error);
 
-                x(data.transaction);
+                try{
+                    x(JSON.parse(data.transaction));
+                }catch (e) {
+                    x(data.transaction);
+                }
             });
 
             this.#connection.emit(ChannelName,{

@@ -21,7 +21,7 @@ export class IO extends Server {
                             socket.emit(ChannelTransactionEvent._tid, {error: data})
                         },
                         complete: (data) => {
-                            socket.emit(ChannelTransactionEvent._tid, {transaction: data})
+                            socket.emit(ChannelTransactionEvent._tid,{transaction: data})
                         }
                     })
                 }

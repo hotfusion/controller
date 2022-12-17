@@ -89,8 +89,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         let files = this.#files.filter(x => x.module);
         for(let i = 0; i < files.length; i++){
             let file = files[i];
-            let {_types, _classTypes ,_firewalls ,_alias} = file.module.prototype
-
+            let {_types, _classTypes ,_firewalls ,_alias} = file.module.prototype;
             let controller;
 
             try {
@@ -124,6 +123,10 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                         let name = _firewalls[i];
                                         try{
                                             await new Promise((x,f) => {
+                                                Object.defineProperty(object,'meta',{
+                                                    enumerable:false, writable:false, configurable:false,
+                                                    value : () => ({key : _path,...method})
+                                                })
                                                 controller[name](object,{
                                                     complete  : x,
                                                     exception : f
@@ -222,17 +225,8 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
                                 complete(schema || value);
                             }catch (e) {
-
-                                console
-                                    .error(e);
-
-                                exception({
-                                    path   : _path,
-                                    errors : ['Exception occurred in controller method, for details see the logs.']
-                                });
-
                                 errors.push({
-                                    error : e,
+                                    error : e.message,
                                     scope : 'method'
                                 })
                                 exception({
@@ -478,13 +472,13 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             (<any>console).info(`creating virtual client`);
             setTimeout(() => {
                 let client = new Client();
-                    client.connect(this.#io.port).then(async () => {
+                    client.connect(this.#io.port).then(async (context) => {
                         console.info(chalk.bold('virtual client is ready'));
                         for(let i = 0 ; i < tests.length; i++){
                             console.info(chalk.yellow(`controller:`),tests[i].className + '.' + tests[i].methodName, chalk.blueBright(JSON.stringify(tests[i].arguments[0])));
-                            try{
+                            try {
                                 console.info(chalk.cyanBright(`output:`),await client.transaction([tests[i].className,tests[i].methodName].join('.'),tests[i].arguments[0]));
-                            }catch (e) {
+                            } catch (e) {
                                 console.error(e.errors)
                             }
                         }
