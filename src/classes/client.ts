@@ -19,8 +19,10 @@ export class Client extends EventEmitter {
     }
     async connect(port){
         await new Promise(x => setTimeout(x,1000));
-
-        this.#connection = io(`http://localhost:${port}`,Object.assign({
+        let uri = `http://localhost:${port}`
+        if(typeof port === 'string')
+            uri = port
+        this.#connection = io(uri,Object.assign({
                 reconnection : false
             },this.#options)
         );

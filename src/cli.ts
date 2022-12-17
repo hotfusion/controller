@@ -102,8 +102,10 @@ const VueTransformer = new Transformer({
         return File;
     }
 })
+let analytics = new Analytics()
 let host = new Host();
 host.use(controller.use)
+    .use(analytics.use)
     .use(new Session().use)
     .use(VueTransformer.use)
     .use(transformer.use)
@@ -124,4 +126,4 @@ host.on('mounted' , () => {
 });
 
 host.use('/', cwd);
-host.start(argv?.port || 8080);
+host.start(argv?.port || 8080, argv.ip);

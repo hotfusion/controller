@@ -1,8 +1,6 @@
 import { Vue as IVue, createDecorator } from "vue-class-component";
 import { Client } from "./classes/client";
 
-
-
 let client,callbacks:any = {
     connect : []
 };

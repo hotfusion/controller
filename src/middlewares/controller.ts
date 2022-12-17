@@ -135,7 +135,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
                         // install transaction
                         (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
-
                             // get controller method from _path
                             let f = get(controller, _path.split('.').splice(1).join('.'));
                             // store error is any
@@ -414,7 +413,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                     f.node.returnType?.typeAnnotation?.typeName?.name ||
                                     f.node.returnType?.typeAnnotation?.type || false
                             };
-                        console.log(methods[_path.join('.')]?.params)
                     }
 
                     traverse(ast, {

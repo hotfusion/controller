@@ -110,7 +110,7 @@ export class Host extends EventEmitter {
         return this;
     }
 
-    async start(port:number){
+    async start(port:number,ip:string = '127.0.0.1'){
         // start the HTTP server
         let middles = this.#middles;
         // install all middlewares
@@ -174,8 +174,8 @@ export class Host extends EventEmitter {
 
         }
         bar.stop();
-        this.#http.listen(port, () => {
-            console.info(chalk.greenBright('server is running at:'), port);
+        this.#http.listen(port, ip,() => {
+            console.info(chalk.greenBright('service is running at'),chalk.bold(ip + ':' + port));
             this.emit('mounted', this);
             this.#express.emit('mounted', this);
         })

@@ -17,21 +17,20 @@ export class Analytics extends MiddlewareFactory implements MiddleWareInterface{
             osu.cpu.usage()
                 .then(cpuPercentage => {
                     this.#cpu = cpuPercentage;
-
+                    /*console.clear()
                     console.info('in process',this.#stats.inProgress);
                     console.info('total',this.#stats.total);
                     console.info('errors',this.#stats.failed);
-                    console.info('cpu',this.#cpu);
-
+                    console.info('cpu',this.#cpu);*/
                 })
-        },500)
+        },1500)
     }
     use(socket, next) {
         let _emit = socket.emit, self = this;
         socket.emit = function () {
             self.#stats.total++;
             let args = [].slice.call(arguments);
-            if(args['error'])
+            if(args?.[1]?.['error'])
                 self.#stats.failed++;
             else
                 self.#stats.completed++;
@@ -46,8 +45,6 @@ export class Analytics extends MiddlewareFactory implements MiddleWareInterface{
         return {};
     }
     async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
-
-
         return this;
     }
 
