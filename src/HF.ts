@@ -2,10 +2,8 @@ type ClassTypes = any
 
 
 interface FirewallContext {
-    socket:any,
-    session:any,
-    arguments:any,
-    method:any
+    meta():any
+    [key:string]:any
 }
 interface FirewallCallback {
     complete:Function
@@ -19,11 +17,12 @@ export const type     = <key extends string, value extends object | any>(target,
     target._types.push(name);
     return target;
 }
-export const firewall = <context extends FirewallContext, callback extends FirewallCallback>(target,name,descriptor:TypedPropertyDescriptor<((Context: context,Callback:callback) => any)>):TypedPropertyDescriptor<((Context: context,Callback:callback) => any)> => {
+
+export const firewall = function (target,name,descriptor:TypedPropertyDescriptor<any>):TypedPropertyDescriptor<(Context: FirewallContext,Callback:FirewallCallback) => any> {
     if(!target._firewalls)
         target._firewalls = [];
     target._firewalls.push(name);
-    return target;
+    return descriptor;
 }
 export const api      = (target,name) => {
     if(!target._apis)
@@ -36,6 +35,18 @@ export const alias    = (name:string) => {
     return (target) => {
         target.prototype._alias = name;
         return target
+    }
+}
+export const gateway    = (url:string[] | string) => {
+    return (target) => {
+        if(!target.prototype._gateways)
+            target.prototype._gateways = [];
+
+        if((<any>url)?.map)
+            target.prototype._gateways = [...target.prototype._gateways,...url]
+        else
+            target.prototype._gateways.push(url);
+        return target;
     }
 }
 export const types    = (_classTypes:ClassTypes) => {

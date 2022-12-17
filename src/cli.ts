@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import {CDN, Controller, Transformer,Session, Server, utils} from "./index";
+import {CDN, Controller, Transformer, Session, utils, Host} from "./index";
 import {Webpack} from "./webpack";
+import {Analytics} from "./middlewares/analytics";
 import {resolve} from "path";
 import {VueLoaderPlugin} from "vue-loader";
 import * as keypress from 'keypress';
@@ -32,9 +33,6 @@ if(argv.public?.startsWith('/'))
     argv.public =  resolve(process.cwd(),'.' + argv.public)
 
 const cwd = argv.public || process.cwd();
-
-// mount server
-const server         = new Server(cwd);
 // controller
 const controller     = new Controller({
     source : resolve(cwd,'./**/*.controller.ts')
@@ -63,44 +61,6 @@ const transformer = new Transformer({
         return File;
     }
 });
-
-/*
-const toolsTransformer = new Transformer({
-    route     : ['/tools',resolve(__dirname)],
-    source    : resolve(resolve(__dirname,'./tools'),'./!**!/!*.ts'),
-    transform : async (File) => {
-        try{
-            File.content = (<any> await Webpack(<any>{
-                cwd   : process.cwd(),
-                entry : File.path,
-                watch : argv.watch ? ({content,stats}) => { //stats.compiler.models
-                    let modules = Array.from(stats.compilation.modules.values()).map(function(m:any) {
-                        return utils.$toLinuxPath(m?.request || '').split('/').pop();
-                    });
-                    //console.log(Array.from(stats.compilation.modules.values()))
-                    //console.info('View file was updated:',modules[0])
-                    File.content = content
-                } : false,
-                plugins : () => {
-                    return [
-                        new VueLoaderPlugin()
-                    ]
-                },
-                rules   : () => {
-                    return [{
-                        test   : /\.vue$/,
-                        loader : 'vue-loader',
-                        exclude: /node_modules/
-                    }];
-                },
-            })).content;
-        }catch (e) {
-            console.error(e);
-        }
-        return File;
-    }
-});
-*/
 
 // vue transformer
 const VueTransformer = new Transformer({
@@ -142,14 +102,26 @@ const VueTransformer = new Transformer({
         return File;
     }
 })
+let host = new Host();
+host.use(controller.use)
+    .use(new Session().use)
+    .use(VueTransformer.use)
+    .use(transformer.use)
+    .use((socket,next) => {
+        next();
+    });
 
-server.host({
-    port         : argv?.port || 8080,
-    sessions     : [new Session()],
-    //transformers : [transformer,VueTransformer],
-    controllers  : [controller],
-   // middlewares  : [['/tools',resolve(__dirname,'./tools')]],
-    cdns         : [
-        new CDN('@moment','https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js')
-    ]
-})
+host.on('client', ({connect,exception}) => {
+    connect({});
+});
+
+host.on('exception', (exception) => {
+    console.error(exception);
+});
+
+host.on('mounted' , () => {
+
+});
+
+host.use('/', cwd);
+host.start(argv?.port || 8080);

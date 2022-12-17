@@ -71,8 +71,29 @@ class Helper {
     }
 }
 
+declare interface ControllerFile {
+    module  : {
+        prototype : {
+            _types
+            _classTypes
+            _firewalls
+            _alias,
+            _gateways
+        }
+    } | any
+    methods : {
+        [key:string]:{
+            params        : {name: string, default: any | undefined, types: string[] }[]
+            accessibility : 'private' | 'public' | 'protected'
+            declarations  : {name:string,type:'boolean' | 'string' | 'number' | 'object' | 'any' | any}[]
+            interface     : string | boolean
+        }
+    },
+    path    : string
+    error  ?: any
+}
 export class Controller extends MiddlewareFactory implements MiddleWareInterface {
-    #files = []
+    #files:ControllerFile[] = []
     readonly #source
     readonly #cwd
     readonly #interfaces = {}
@@ -84,23 +105,27 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         this.#cwd        = source.split('*')[0];
         this.#source     = utils.$toLinuxPath(source.slice(source.indexOf('*'),source.length));
         this.#interfaces = Helper.getAllInterfaces(this.#cwd);
+
     }
     use(socket,next){
-        let files = this.#files.filter(x => x.module);
+        let files:ControllerFile[] = this.#files.filter(x => x.module);
         for(let i = 0; i < files.length; i++){
-            let file = files[i];
-            let {_types, _classTypes ,_firewalls ,_alias} = file.module.prototype;
+            let file:ControllerFile = files[i];
+            let {_types, _classTypes ,_firewalls ,_alias,_gateways} = file.module.prototype;
             let controller;
-
             try {
+                // mount the class module and pass the user class
                 controller = new file.module(new User(socket));
+                // do we have TypeClass?
                 if(_classTypes)
-                   _classTypes = new _classTypes()
+                   _classTypes = new _classTypes();
 
+                // collected all interfaces from d.ts files
                 let interfaces = Object.keys(this.#interfaces).map(filename => {
                     return this.#interfaces[filename]
                 });
 
+                // install all methods in the file
                 Object.keys(file.methods).forEach(_path => {
                     let method = file.methods[_path];
                     if(method.accessibility === 'protected' || method.accessibility === 'public'){
@@ -110,6 +135,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
                         // install transaction
                         (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
+
                             // get controller method from _path
                             let f = get(controller, _path.split('.').splice(1).join('.'));
                             // store error is any
@@ -197,10 +223,11 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 });
 
                             // if any errors, throw exception
-                            if(errors.length)
+                            if(errors.length) {
                                 return exception({
-                                    path:_path, errors
+                                    path: _path, errors
                                 });
+                            }
 
                             try{
                                 let value = await f.apply(
@@ -248,9 +275,9 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
     async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
         this.#http = http;
         this.#io   = io;
-        let getFiles = (bar?:any) =>{
+        let getFiles = (bar?:any):ControllerFile[]  =>{
             let files = glob.sync([this.#source,'!node_modules'], { dot: true,cwd:this.#cwd }).map(x => path.resolve(this.#cwd,x));
-            return files.map(x => {
+            return files.map((x:string) => {
                 try{
                     clearModule(x.replace('.ts','.js'));
                     let module  = require(x.replace('.ts','.js')).default
@@ -263,7 +290,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
                     let parse = (f) => {
                         // TSTypeParameterDeclaration
-                        let declarations = f.node?.typeParameters?.params?.map?.(x => ({name:x.name,type:x.constraint?.typeName?.name || x.constraint?.type || x?.type})) || [];
+                        let declarations :any = f.node?.typeParameters?.params?.map?.(x => ({name:x.name,type:x.constraint?.typeName?.name || x.constraint?.type || x?.type})) || [];
 
                         declarations = declarations.map(x => {
                             x.type = ((y) => {
@@ -332,7 +359,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             f.node.key.name)
 
 
-                        let types = (f.node?.callee || f.node).params.map(P => {
+                        let types:any  = (f.node?.callee || f.node).params.map(P => {
                             let meta = {
                                 params : []
                             }
@@ -380,7 +407,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 }),
                                 accessibility : accessibility,
                                 declarations  : declarations,
-
                                 interface     :
                                 // : Promise<Source>
                                     f.node.returnType?.typeAnnotation?.typeParameters?.params?.[0]?.typeName?.name ||
@@ -388,6 +414,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                     f.node.returnType?.typeAnnotation?.typeName?.name ||
                                     f.node.returnType?.typeAnnotation?.type || false
                             };
+                        console.log(methods[_path.join('.')]?.params)
                     }
 
                     traverse(ast, {
@@ -399,7 +426,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                         methods : methods,
                         module  : module,
                         path    : x
-                    }
+                    };
                 }catch (e) {
                     return {
                         methods : {},
@@ -416,8 +443,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             if(x.error)
                 console.error('controller exception:', x.error);
         })
-
-        this.#files.forEach(file => {
+        this.#files.forEach((file:ControllerFile) => {
             let to,tp;
             fs.watch(file.path, (eventType, filename) => {
                 process.stdout.write('\x1Bc')
