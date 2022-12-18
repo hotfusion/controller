@@ -149,11 +149,11 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 method.params.forEach(x => {
                                         let value = context[x.name];
                                         if(!value)
-                                            throw new TypeException(`Argument value [${chalk.red(_path)}]:[${x.name}] required in arguments`)
+                                            throw new TypeException(`arguments passed to transaction [${_path}] missing property [${x.name}] `)
 
                                         let types = x.types;
                                         if(types.length && !_types?.find && !_classTypes)
-                                            throw new TypeException(`Controller method [${_path}] => [${x.name}:${types.join(' | ')}] requires type declaration: @type ${types.join(' | ')} : (key,value) => {}`)
+                                            throw new TypeException(`Controller method [${_path}] => [${x.name}:${types.join(' | ')}] requires type validator - @type ${types.join(' | ')} - (key,value) => {}`)
                                         else
                                             types.forEach(typeName => {
                                                 let evaluate:string = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
@@ -163,7 +163,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                                     evaluate = method?.declarations?.find?.(x => x.name === typeName)?.type
 
                                                 if(!evaluate)
-                                                    throw new TypeException(`Missing type validation [${typeName}] for ${_path}: ${x.name}`)
+                                                    throw new TypeException(`Missing type validation [${typeName}] for ${_path} - ${x.name}`)
                                                 else
                                                     try{
                                                         (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
@@ -198,7 +198,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             }catch (e) {
                                 exception({
                                     path    : _path,
-                                    message : e.message.split(':')[1]?.trim?.(),
+                                    message : e.message,
                                     name    : e.name,
                                     code    : e.code
                                 });

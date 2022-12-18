@@ -59,54 +59,7 @@ export class HF {
     }
 }
 
-/*(<any>HF.client).on = createDecorator(function(options:any, key)  {
-
-    if(!client)
-        client  = new Client();
-
-    if(key === 'connect') {
-        const callback:any  = options.methods['connect'];
-        options.methods['connect'] = function (port)  {
-            if(!client._connected) {
-                client.on('handshake', (e) => {
-                    console
-                        .log(e);
-
-                    if (!client._connected) {
-                        client._connected = true;
-                        setTimeout(() => {
-                            callbacks.connect.forEach(x => x.callback(client));
-                        },1000)
-                    } else
-                        options.methods?.['reconnect']?.(client);
-                });
-                client.connect(port);
-            }
-            return callback.call(this,client);
-        }
-        callbacks.connect.push({callback:options.methods['connect'] ,options})
-    }
-
-    if(key === 'exception')
-        client.on('exception', (e) => {
-            options.methods?.[key]?.(e);
-        });
-
-    if(key === 'disconnect')
-        client.on('disconnect', (e) => {
-            options.methods?.[key]?.(e);
-        });
-
-    if(key === 'reconnect'){
-        client.update({
-            timeout              : 5000,
-            reconnection         : true,
-            reconnectionDelay    : 1000,
-            reconnectionDelayMax : 5000,
-            reconnectionAttempts : 99999
-        });
-    }
-});*/
 export const Vue = IVue;
-export {Options as options} from "vue-class-component";
+export {Options as options,Options} from "vue-class-component";
 export { Client } from './classes/client';
+export * as UI from "@hotfusion/ui"
