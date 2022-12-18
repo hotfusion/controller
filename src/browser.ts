@@ -6,6 +6,28 @@ let client,callbacks:any = {
 };
 export class HF {
     static client:any  = {
+        connect : (port, options) => {
+            if(!client && (typeof port === "number" || typeof port === "string")) {
+                client = new Client();
+                client.update(options);
+
+                client.on('handshake', (e) => {
+                    if(!client.__connected) {
+                        client.__connected = true;
+                        callbacks.connect.forEach(origin => origin(client));
+                    }else
+                        callbacks?.reconnect?.forEach?.(origin => origin(client))
+                });
+                client.on('disconnect', (e) => {
+                    callbacks?.disconnect?.forEach?.(origin => origin(client))
+                });
+                client.on('exception', (e) => {
+                    callbacks?.exception?.forEach?.(origin => origin(client))
+                });
+
+                client.connect(port);
+            }
+        },
         on : createDecorator(function(options:any, key)  {
             options.mixins = [...(options.mixins || []),{
                 beforeMount(){
@@ -16,27 +38,9 @@ export class HF {
                     callbacks[key].push(origin);
 
                     if(key === 'connect')
-                        this[key] = function (port,options = {})  {
+                        this[key] =  (port,options = {}) =>  {
                             if(!client && (typeof port === "number" || typeof port === "string")) {
-                                client = new Client();
-                                client.update(options);
-
-                                client.on('handshake', (e) => {
-                                    if(!client.__connected) {
-                                        client.__connected = true;
-                                        callbacks.connect.forEach(origin => origin(client));
-                                    }else
-                                        callbacks?.reconnect?.forEach?.(origin => origin(client))
-                                });
-
-                                client.on('disconnect', (e) => {
-                                    callbacks?.disconnect?.forEach?.(origin => origin(client))
-                                });
-                                client.on('exception', (e) => {
-                                    callbacks?.exception?.forEach?.(origin => origin(client))
-                                });
-
-                                client.connect(port);
+                                this.connect(port,options)
                             }else
                                 return origin(client)
                         }
@@ -54,9 +58,6 @@ export class HF {
         }
     }
 }
-
-
-
 
 /*(<any>HF.client).on = createDecorator(function(options:any, key)  {
 

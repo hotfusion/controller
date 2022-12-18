@@ -21,13 +21,12 @@ export class Client extends EventEmitter {
         await new Promise(x => setTimeout(x,1000));
         let uri = `http://localhost:${port}`
         if(typeof port === 'string')
-            uri = port
+            uri = port;
+
         this.#connection = io(uri,Object.assign({
                 reconnection : false
             },this.#options)
         );
-
-
 
         this.#connection.on('disconnect', (event) => {
                 this.emit('disconnect', event);
@@ -56,14 +55,15 @@ export class Client extends EventEmitter {
             }
         );
         return await new Promise(x => {
-            this.#connection.on('handshake', (event) => {
-                    this.emit('handshake', event || {});
-                    x(event || {})
+                this.#connection.on('handshake', (context:ServiceContext) => {
+                    //if(Object.keys(context).)
+                    this.emit('handshake', context || {});
+                    x(context || {})
                 }
             );
         })
     }
-    transaction(ChannelName:string,VanillaObject,timeout?:number){
+    transaction(ChannelName:string,context:ParsedJSON,timeout?:number){
         return new Promise((x,f) => {
             let _tid   = utils.$objectId();
             let to:any = timeout || 5000;
@@ -83,8 +83,8 @@ export class Client extends EventEmitter {
             });
 
             this.#connection.emit(ChannelName,{
-                _tid   : _tid,
-                object : VanillaObject
+                _tid    : _tid,
+                context : context
             });
 
             let int = setInterval(() => {

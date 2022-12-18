@@ -10,6 +10,7 @@ import MiddlewareFactory from "./index";
 import {get,set} from 'lodash';
 const chalk = require('chalk');
 const clearModule = require('clear-module');
+import {FirewallExceptions,TypeException,FileControllerException} from "../exceptions";
 
 class Helper {
    static getAllInterfaces(cwd){
@@ -71,27 +72,7 @@ class Helper {
     }
 }
 
-declare interface ControllerFile {
-    module  : {
-        prototype : {
-            _types
-            _classTypes
-            _firewalls
-            _alias,
-            _gateways
-        }
-    } | any
-    methods : {
-        [key:string]:{
-            params        : {name: string, default: any | undefined, types: string[] }[]
-            accessibility : 'private' | 'public' | 'protected'
-            declarations  : {name:string,type:'boolean' | 'string' | 'number' | 'object' | 'any' | any}[]
-            interface     : string | boolean
-        }
-    },
-    path    : string
-    error  ?: any
-}
+
 export class Controller extends MiddlewareFactory implements MiddleWareInterface {
     #files:ControllerFile[] = []
     readonly #source
@@ -134,104 +115,68 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             _path = [_alias,_path.split('.').splice(1).join('.')].join('.');
 
                         // install transaction
-                        (<any>socket.transaction)(_path,async ({complete,exception,object}) => {
-                            // get controller method from _path
-                            let f = get(controller, _path.split('.').splice(1).join('.'));
-                            // store error is any
-                            let errors:{scope : 'firewall' | 'method' | 'type' ,error:any}[] = [];
-                            // if protected, use firewalls
-                            if(method.accessibility === 'protected')
-                                if(!_firewalls)
-                                    console.error(`method controller required a [firewall] hook since [${_path}] is a protected method controller`)
-                                else {
-                                    for(let i = 0; i < _firewalls.length; i++){
-                                        let name = _firewalls[i];
-                                        try{
-                                            await new Promise((x,f) => {
-                                                Object.defineProperty(object,'meta',{
-                                                    enumerable:false, writable:false, configurable:false,
-                                                    value : () => ({key : _path,...method})
-                                                })
-                                                controller[name](object,{
-                                                    complete  : x,
-                                                    exception : f
-                                                })
-                                            })
-                                        }catch (e) {
-                                            errors.push({
-                                                error  : e,
-                                                scope  : 'firewall'
-                                            });
-                                        }
-
-                                    }
-                                }
-
-
-                            // validate params
-                            if(!errors.length)
-                                method.params.forEach(x => {
-                                    let value = object[x.name];
-                                    if(!value)
-                                        errors.push({
-                                            scope : 'type',
-                                            error : {
-                                                type    : 'noType',
-                                                message : `Argument value [${chalk.red(_path)}]:[${x.name}] required in arguments`
-                                            }
-                                        });
-
-                                    let types = x.types;
-                                    if(types.length && !_types?.find && !_classTypes)
-                                        errors.push({
-                                            scope : 'type',
-                                            error : {
-                                                type    : `noType`,
-                                                message : `Controller method [${_path}] => [${x.name}:${types.join(' | ')}] requires type declaration: @type ${types.join(' | ')} : (key,value) => {}`
-                                            }
-                                        })
-                                    else
-                                        types.forEach(typeName => {
-                                            let evaluate:string = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
-                                            if(!evaluate)
-                                                evaluate = _types?.find?.(y => y === method.declarations.find(x =>  x.name === y)?.type);
-                                            if(!evaluate)
-                                                evaluate = method?.declarations?.find?.(x => x.name === typeName)?.type
-
-                                            if(!evaluate)
-                                                errors.push({
-                                                    scope : 'type',
-                                                    error : {
-                                                        type    : typeName,
-                                                        message : `Missing type validation [${typeName}] for ${_path}: ${x.name}`
-                                                    }
-                                                })
-                                            else
-                                                try{
-                                                    (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
-                                                }catch(e){
-                                                    errors.push({
-                                                        scope : 'type',
-                                                        error : {
-                                                            type    : typeName,
-                                                            message : e.message
-                                                        }
-                                                    })
-                                                }
-                                        })
-                                });
-
-                            // if any errors, throw exception
-                            if(errors.length) {
-                                return exception({
-                                    path: _path, errors
-                                });
-                            }
-
+                        (<any>socket.transaction)(_path,async ({complete,exception,context}:TransactionCallbackContext) => {
+                            // use try to catch exceptions
                             try{
+                                // get controller method from _path
+                                let f = get(controller, _path.split('.').splice(1).join('.'));
+                                // if protected, use firewalls
+                                if(method.accessibility === 'protected')
+                                    if(!_firewalls)
+                                        throw new FirewallExceptions(`protected method [${_path}] requires a [firewall] hook inside the class.`)
+                                    else {
+                                        for(let i = 0; i < _firewalls.length; i++){
+                                            let name = _firewalls[i];
+                                            try{
+                                                await new Promise((x,f) => {
+                                                    Object.defineProperty(context,'meta',{
+                                                        enumerable:false, writable:false, configurable:false,
+                                                        value : () => ({key : _path,...method})
+                                                    })
+                                                    controller[name](context,{
+                                                        complete  : x,
+                                                        exception : f
+                                                    })
+                                                })
+                                            }catch (e) {
+                                                throw new FirewallExceptions(e)
+                                            }
+
+                                        }
+                                    }
+
+                                // validate params
+                                method.params.forEach(x => {
+                                        let value = context[x.name];
+                                        if(!value)
+                                            throw new TypeException(`Argument value [${chalk.red(_path)}]:[${x.name}] required in arguments`)
+
+                                        let types = x.types;
+                                        if(types.length && !_types?.find && !_classTypes)
+                                            throw new TypeException(`Controller method [${_path}] => [${x.name}:${types.join(' | ')}] requires type declaration: @type ${types.join(' | ')} : (key,value) => {}`)
+                                        else
+                                            types.forEach(typeName => {
+                                                let evaluate:string = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
+                                                if(!evaluate)
+                                                    evaluate = _types?.find?.(y => y === method.declarations.find(x =>  x.name === y)?.type);
+                                                if(!evaluate)
+                                                    evaluate = method?.declarations?.find?.(x => x.name === typeName)?.type
+
+                                                if(!evaluate)
+                                                    throw new TypeException(`Missing type validation [${typeName}] for ${_path}: ${x.name}`)
+                                                else
+                                                    try{
+                                                        (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
+                                                    }catch(e){
+                                                        throw new TypeException(e)
+                                                    }
+                                            })
+                                    });
+
+
                                 let value = await f.apply(
                                     controller,
-                                    [...Object.values(object),socket]
+                                    [...Object.values(context),socket]
                                 );
                                 // return interface schema
                                 let schema;
@@ -251,19 +196,18 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
                                 complete(schema || value);
                             }catch (e) {
-                                errors.push({
-                                    error : e.message,
-                                    scope : 'method'
-                                })
                                 exception({
-                                    path:_path, errors
+                                    path    : _path,
+                                    message : e.message.split(':')[1]?.trim?.(),
+                                    name    : e.name,
+                                    code    : e.code
                                 });
                             }
                         })
                     }
                 })
             }catch (e) {
-                console.error('Service controller could not loaded:',file)
+                new FileControllerException('Service controller could not loaded:',file)
             }
         }
 
@@ -407,7 +351,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 accessibility : accessibility,
                                 declarations  : declarations,
                                 interface     :
-                                // : Promise<Source>
+                                    // : Promise<Source>
                                     f.node.returnType?.typeAnnotation?.typeParameters?.params?.[0]?.typeName?.name ||
                                     // : Source
                                     f.node.returnType?.typeAnnotation?.typeName?.name ||
@@ -440,7 +384,8 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         this.#files.forEach(x => {
             if(x.error)
                 console.error('controller exception:', x.error);
-        })
+        });
+
         this.#files.forEach((file:ControllerFile) => {
             let to,tp;
             fs.watch(file.path, (eventType, filename) => {
@@ -475,7 +420,8 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                 },100)
             });
         });
-        http.on('mounted', () => this.test())
+
+        http.on('mounted', () => this.test());
         return this;
     }
 

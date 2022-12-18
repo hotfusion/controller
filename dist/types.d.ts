@@ -2,6 +2,7 @@
 
 export * from './types/classes';
 export * from './types/middlewares';
+export * from './exceptions'
 export * as HF from './types/HF'
 export const UI
 

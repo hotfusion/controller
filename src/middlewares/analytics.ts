@@ -8,6 +8,7 @@ export class Analytics extends MiddlewareFactory implements MiddleWareInterface{
         failed     : 0,
         total      : 0
     }
+
     #cpu = 0
     constructor() {
         super();

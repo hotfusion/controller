@@ -44,16 +44,19 @@ export class Host extends EventEmitter {
         this.#io .use((socket,next) => new IO(socket,next));
         // attach socket server to HTTp server
         this.#io .attach(this.#http);
-        // when a new connection established
+        // when a new connection established, collect all context from middlewares
         this.#io .on('connection',(socket) => {
             this.emit('client',{
                 connect   : (e) => {
-                    let segments = this.#middles.filter((x:any) => typeof x?.callback?.handshake === 'function').map((x:any) => {
+                    let controllers = this.#middles.filter((x:any) => typeof x?.callback?.handshake === 'function').map((x:any) => {
                         return {
                              [x.callback.className]:x?.callback?.handshake?.(socket) || {}
                          }
-                    })
-                    socket.emit('handshake', Object.assign(e || {},{segments:segments}))
+                    });
+                    let context:ServiceContext = {
+                        controllers : controllers
+                    }
+                    socket.emit('handshake', Object.assign(e || {},{context:context}) as ServiceContext)
                 },
                 exception : (e) => socket.emit('exception', e)
             })

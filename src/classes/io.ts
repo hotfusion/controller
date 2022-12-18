@@ -14,16 +14,16 @@ export class IO extends Server {
 
         socket.transaction = (ChannelName,ChannelCallback) =>
             socket.on(
-                ChannelName?.join?.('.') || ChannelName, (ChannelTransactionEvent:{object,_tid}) => {
+                ChannelName?.join?.('.') || ChannelName, (Event:TransactionEvent) => {
                     ChannelCallback({
-                        object: ChannelTransactionEvent.object,
+                        context   : Event.context,
                         exception: (data) => {
-                            socket.emit(ChannelTransactionEvent._tid, {error: data})
+                            socket.emit(Event._tid, {error: data})
                         },
                         complete: (data) => {
-                            socket.emit(ChannelTransactionEvent._tid,{transaction: data})
+                            socket.emit(Event._tid,{transaction: data})
                         }
-                    })
+                    } as TransactionCallbackContext)
                 }
             );
 
