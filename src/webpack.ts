@@ -35,7 +35,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
          resolve  : {
             alias      : {...(_config?.alias?.() || _config?.alias || {}),
                 "HF" : path.resolve(__dirname,'./browser.js'),
-                "@hotfusion/micro" : __dirname
+                "@hotfusion/service" : __dirname
             },
             modules    : resolves,
             extensions : ['.ts','.css','.js','.vue', '.json']
@@ -43,7 +43,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
          plugins  : [
             ...(_config?.plugins?.() || []),
             new webpack.NormalModuleReplacementPlugin(
-                /@hotfusion\/micro/,
+                /@hotfusion\/service/,
                 __dirname + '/browser.js'
             )
         ],
