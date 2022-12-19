@@ -51,6 +51,7 @@
     "node-os-utils": "^1.3.7"
   },
   "scripts": {
+    "debug" : "node ./dist/server.js",
     "cli-server" : "node ./dist/server.js",
     "publish": "npm publish ./dist --access=public"
   }

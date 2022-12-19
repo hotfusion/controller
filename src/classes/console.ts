@@ -13,7 +13,10 @@ let busy = false
 export class Console {
     pattern = '⢹⢺⢼⣸⣇⡧⡗⡏'
     sync  = []
-    constructor() {
+    disabled = false
+    constructor(disable?:boolean) {
+        this.disabled = disable;
+        if(!this.disabled)
         stamp( console , {
             format : ':date(HH:MM:ss.l).grey :label() :msg()',
             tokens :{
@@ -37,6 +40,7 @@ export class Console {
         let _error = console.error, self = this;
 
         let C = {};
+        if(!this.disabled)
         ['error','log','warn','info'].forEach((x) => {
             C[x] = console[x];
             console[x] = function () {
@@ -61,8 +65,12 @@ export class Console {
 
         },30);
 
-        console.clear    = () => this.sync.push({scope:'clear'});
-        console.progress = this.progress
+        console.clear    = () => {
+            //if(!this.disabled)
+                //this.sync.push({scope:'clear'})
+        };
+        console.progress = this.progress.bind(this)
+
     }
     parse(msg) {
         return msg.split(' ')
@@ -76,25 +84,34 @@ export class Console {
         return ['[',moment(new Date()).format('HH:MM:ss.SSS'),']'].join('')
     }
     progress(config){
-        let P =  new progress.SingleBar({
-            format           : 'installing |' + chalk.green('{bar}') + `| {percentage}% || {value}/{total} || {filename} ${config?.scope || ''}`,
-            barCompleteChar  : '\u2588',
-            barIncompleteChar: '\u2591',
-            hideCursor       : true,
-            clearOnComplete  : true
-        }, progress.Presets.shades_classic);
+        let P:any  = {};
+
+        if(!this.disabled)
+            P = new progress.SingleBar({
+                    format           : 'installing |' + chalk.green('{bar}') + `| {percentage}% || {value}/{total} || {filename} ${config?.scope || ''}`,
+                    barCompleteChar  : '\u2588',
+                    barIncompleteChar: '\u2591',
+                    hideCursor       : true,
+                    clearOnComplete  : true
+            }, progress.Presets.shades_classic);
 
         let _stop = P.stop,_start = P.start,_update = P.update;
         P.start = (a,b) => {
+            if(this.disabled)
+                return
             process.stdout.write('\x1Bc')
             busy = true
             _start.call(P,a,b);
         }
         P.update = (a,b) => {
+            if(this.disabled)
+                return
             busy = true
             _update.call(P,a,b)
         }
         P.stop =  () => {
+            if(this.disabled)
+                return
             process.stdout.write('\x1Bc');
             _stop.call(P);
             setTimeout(() => {

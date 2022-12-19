@@ -45,7 +45,11 @@ declare interface ControllerFile {
             params        : {name: string, default: any | undefined, types: string[] }[]
             accessibility : 'private' | 'public' | 'protected'
             declarations  : {name:string,type:'boolean' | 'string' | 'number' | 'object' | 'any' | any}[]
-            interface     : string | boolean
+            interface     : {
+                name : string,
+                isArray:boolean
+                isPromise:boolean
+            }
         }
     },
     path    : string

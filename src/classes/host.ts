@@ -15,7 +15,7 @@ import {IO}     from "./io";
 import {utils} from "./utils";
 import {Console} from "./console";
 
-new Console();
+new Console(true);
 
 export class Host extends EventEmitter {
     readonly #express
@@ -130,7 +130,10 @@ export class Host extends EventEmitter {
 
             let {callback,dir} = middles[i];
             try{
-                this.#express.port = this.#io.port = port;
+                this.#express.port     = this.#io.port     = port;
+                this.#express.ip       = this.#io.ip       = ip;
+                this.#express.protocol = this.#io.protocol = 'http://';
+
                 await (<any>callback)?.install?.(this.#express,this.#io);
                 await (<any>dir)?.install?.(this.#express,this.#io);
             }catch (e) {

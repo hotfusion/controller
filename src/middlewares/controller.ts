@@ -39,7 +39,6 @@ class Helper {
                         if(parent?.node.type === 'TSInterfaceBody'){
                             TSInterfaceBody = true;
                         }
-
                         let name = parent?.node?.id?.name || parent?.node?.key?.name
                         if(name)
                             path.unshift(name);
@@ -88,133 +87,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         this.#interfaces = Helper.getAllInterfaces(this.#cwd);
 
     }
-    use(socket,next){
-        let files:ControllerFile[] = this.#files.filter(x => x.module);
-        for(let i = 0; i < files.length; i++){
-            let file:ControllerFile = files[i];
-            let {_types, _classTypes ,_firewalls ,_alias,_gateways} = file.module.prototype;
-            let controller;
-            try {
-                // mount the class module and pass the user class
-                controller = new file.module(new User(socket));
-                // do we have TypeClass?
-                if(_classTypes)
-                   _classTypes = new _classTypes();
-
-                // collected all interfaces from d.ts files
-                let interfaces = Object.keys(this.#interfaces).map(filename => {
-                    return this.#interfaces[filename]
-                });
-
-                // install all methods in the file
-                Object.keys(file.methods).forEach(_path => {
-                    let method = file.methods[_path];
-                    if(method.accessibility === 'protected' || method.accessibility === 'public'){
-                        // can use class alias
-                        if(_alias)
-                            _path = [_alias,_path.split('.').splice(1).join('.')].join('.');
-
-                        // install transaction
-                        (<any>socket.transaction)(_path,async ({complete,exception,context}:TransactionCallbackContext) => {
-                            // use try to catch exceptions
-                            try{
-                                // get controller method from _path
-                                let f = get(controller, _path.split('.').splice(1).join('.'));
-                                // if protected, use firewalls
-                                if(method.accessibility === 'protected')
-                                    if(!_firewalls)
-                                        throw new FirewallExceptions(`protected method [${_path}] requires a [firewall] hook inside the class.`)
-                                    else {
-                                        for(let i = 0; i < _firewalls.length; i++){
-                                            let name = _firewalls[i];
-                                            try{
-                                                await new Promise((x,f) => {
-                                                    Object.defineProperty(context,'meta',{
-                                                        enumerable:false, writable:false, configurable:false,
-                                                        value : () => ({key : _path,...method})
-                                                    })
-                                                    controller[name](context,{
-                                                        complete  : x,
-                                                        exception : f
-                                                    })
-                                                })
-                                            }catch (e) {
-                                                throw new FirewallExceptions(e)
-                                            }
-
-                                        }
-                                    }
-
-                                // validate params
-                                method.params.forEach(x => {
-                                        let value = context[x.name];
-                                        if(!value)
-                                            throw new TypeException(`arguments passed to transaction [${_path}] missing property [${x.name}] `)
-
-                                        let types = x.types;
-                                        if(types.length && !_types?.find && !_classTypes)
-                                            throw new TypeException(`Controller method [${_path}] => [${x.name}:${types.join(' | ')}] requires type validator - @type ${types.join(' | ')} - (key,value) => {}`)
-                                        else
-                                            types.forEach(typeName => {
-                                                let evaluate:string = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
-                                                if(!evaluate)
-                                                    evaluate = _types?.find?.(y => y === method.declarations.find(x =>  x.name === y)?.type);
-                                                if(!evaluate)
-                                                    evaluate = method?.declarations?.find?.(x => x.name === typeName)?.type
-
-                                                if(!evaluate)
-                                                    throw new TypeException(`Missing type validation [${typeName}] for ${_path} - ${x.name}`)
-                                                else
-                                                    try{
-                                                        (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
-                                                    }catch(e){
-                                                        throw new TypeException(e)
-                                                    }
-                                            })
-                                    });
-
-
-                                let value = await f.apply(
-                                    controller,
-                                    [...Object.values(context),socket]
-                                );
-                                // return interface schema
-                                let schema;
-                                if(method.interface){
-                                    schema = {}
-                                    let interfaces = Object.keys(this.#interfaces).map(x => this.#interfaces[x].filter(y => y.name === method.interface)).flat();
-                                    interfaces.forEach(x => set(schema,x.path.split('.'),{}));
-
-                                    interfaces.forEach(inter => {
-                                        if(get(value,inter.path) === undefined && inter.types[0].required){
-                                            set(schema,inter.path,null);
-                                            console.warn(`Returned object from method [${_path}] is missing property  [${inter.name}.${inter.path}]`)
-                                        }else
-                                            set(schema,inter.path,get(value,inter.path))
-                                    })
-                                }
-
-                                complete(schema || value);
-                            }catch (e) {
-                                exception({
-                                    path    : _path,
-                                    message : e.message,
-                                    name    : e.name,
-                                    code    : e.code
-                                });
-                            }
-                        })
-                    }
-                })
-            }catch (e) {
-                new FileControllerException('Service controller could not loaded:',file)
-            }
-        }
-
-        next();
-        return this;
-    }
-
     async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
         this.#http = http;
         this.#io   = io;
@@ -329,34 +201,42 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             return meta.params;
                         });
 
-                        if(_path.join('.').startsWith(module.name))
+
+                        if(_path.join('.').startsWith(module.name)) {
+                            let param = f.node.returnType?.typeAnnotation;
                             methods[_path.join('.')] = {
-                                params        : types.flat().map(x => {
+                                params: types.flat().map(x => {
                                     x.types = x.types.map(y => {
-                                        if(y === 'TSStringKeyword')
+                                        if (y === 'TSStringKeyword')
                                             return 'string';
-                                        if(y === 'TSNumberKeyword')
+                                        if (y === 'TSNumberKeyword')
                                             return 'number';
-                                        if(y === 'TSBooleanKeyword')
+                                        if (y === 'TSBooleanKeyword')
                                             return 'boolean';
-                                        if(y === 'TSAnyKeyword')
+                                        if (y === 'TSAnyKeyword')
                                             return 'any';
-                                        if(y === 'TSObjectKeyword')
+                                        if (y === 'TSObjectKeyword')
                                             return 'object';
 
                                         return y
                                     });
                                     return x;
                                 }),
-                                accessibility : accessibility,
-                                declarations  : declarations,
-                                interface     :
-                                    // : Promise<Source>
-                                    f.node.returnType?.typeAnnotation?.typeParameters?.params?.[0]?.typeName?.name ||
-                                    // : Source
-                                    f.node.returnType?.typeAnnotation?.typeName?.name ||
-                                    f.node.returnType?.typeAnnotation?.type || false
+                                accessibility: accessibility,
+                                declarations: declarations,
+                                interface: {
+                                    isArray   : param?.typeParameters?.params?.[0]?.type === 'TSArrayType' || param?.type === 'TSArrayType' || false,
+                                    name      :
+                                        // : Promise<T>
+                                        param?.typeParameters?.params?.[0]?.typeName?.name ||
+                                        // : Promise<T[]>
+                                        param?.typeParameters?.params?.[0].elementType?.typeName?.name ||
+                                        // : Source
+                                        param?.typeName?.name ||
+                                        param?.type || false
+                                }
                             };
+                        }
                     }
 
                     traverse(ast, {
@@ -424,7 +304,154 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         http.on('mounted', () => this.test());
         return this;
     }
+    use(socket,next){
+        let files:ControllerFile[] = this.#files.filter(x => x.module);
+        for(let i = 0; i < files.length; i++){
+            let file:ControllerFile = files[i];
+            let {_types, _classTypes ,_firewalls ,_alias,_gateways} = file.module.prototype;
+            let controller;
+            try {
+                // mount the class module and pass the user class
+                controller = new file.module(new User(socket));
+                // do we have TypeClass?
+                if(_classTypes)
+                   _classTypes = new _classTypes();
 
+                // collected all interfaces from d.ts files
+                let interfaces = Object.keys(this.#interfaces).map(filename => {
+                    return this.#interfaces[filename]
+                });
+
+                // install all methods in the file
+                Object.keys(file.methods).forEach(_path => {
+                    let method = file.methods[_path];
+                    if(method.accessibility === 'protected' || method.accessibility === 'public'){
+                        // can use class alias
+                        if(_alias)
+                            _path = [_alias,_path.split('.').splice(1).join('.')].join('.');
+
+                        // install transaction
+                        (<any>socket.transaction)(_path,async ({complete,exception,context}:TransactionCallbackContext) => {
+                            // use try to catch exceptions
+                            try{
+                                // get controller method from _path
+                                let f = get(controller, _path.split('.').splice(1).join('.'));
+                                // if protected, use firewalls
+                                if(method.accessibility === 'protected')
+                                    if(!_firewalls)
+                                        throw new FirewallExceptions(`protected method [${_path}] requires a [firewall] hook inside the class.`)
+                                    else {
+                                        for(let i = 0; i < _firewalls.length; i++){
+                                            let name = _firewalls[i];
+                                            try{
+                                                await new Promise((x,f) => {
+                                                    Object.defineProperty(context,'meta',{
+                                                        enumerable:false, writable:false, configurable:false,
+                                                        value : () => ({key : _path,...method})
+                                                    })
+                                                    controller[name](context,{
+                                                        complete  : x,
+                                                        exception : f
+                                                    })
+                                                })
+                                            }catch (e) {
+                                                throw new FirewallExceptions(e)
+                                            }
+
+                                        }
+                                    }
+
+                                // validate params
+                                method.params.forEach(x => {
+                                        let value = context[x.name];
+                                        if(!value)
+                                            throw new TypeException(`arguments passed to transaction [${_path}] missing property [${x.name}] `)
+
+                                        let types = x.types;
+                                        if(types.length && !_types?.find && !_classTypes)
+                                            throw new TypeException(`Controller method [${_path}] => [${x.name}:${types.join(' | ')}] requires type validator - @type ${types.join(' | ')} - (key,value) => {}`)
+                                        else
+                                            types.forEach(typeName => {
+                                                let evaluate:string = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
+                                                if(!evaluate)
+                                                    evaluate = _types?.find?.(y => y === method.declarations.find(x =>  x.name === y)?.type);
+                                                if(!evaluate)
+                                                    evaluate = method?.declarations?.find?.(x => x.name === typeName)?.type
+
+                                                if(!evaluate)
+                                                    throw new TypeException(`Missing type validation [${typeName}] for ${_path} - ${x.name}`)
+                                                else
+                                                    try{
+                                                        (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
+                                                    }catch(e){
+                                                        throw new TypeException(e)
+                                                    }
+                                            })
+                                    });
+
+
+                                let value = await f.apply(
+                                    controller,
+                                    [...Object.values(context),socket]
+                                );
+                                // return interface schema
+                                let schema;
+                                if(method.interface){
+                                    schema = {}
+
+                                    // filter interfaces
+                                    let interfaces = Object.keys(this.#interfaces).map(x => this.#interfaces[x].filter(y => y.name === method.interface.name)).flat();
+                                        interfaces.forEach(x => set(schema,x.path.split('.'),{}));
+                                        interfaces.forEach(inter => {
+
+                                            if(method.interface.isArray && !value.map){
+                                                console.warn(`Interface for method [${_path}] defined as array but returns non array context.`)
+                                            }else {
+                                                if(method.interface.isArray ){
+
+                                                    schema = value.map((x,i) => {
+                                                        if(get(x,inter.path) === undefined && inter.types[0].required){
+                                                            console.warn(`Interface for method [${_path}] is missing a property [${inter.name}.${inter.path}] in array collection at index [${i}]`)
+                                                            return {
+                                                                [inter.path] : null
+                                                            }
+                                                        }else {
+                                                           return {
+                                                               [inter.path] : get(x,inter.path)
+                                                           }
+                                                        }
+                                                    })
+                                                }else
+                                                   if(get(value,inter.path) === undefined && inter.types[0].required){
+                                                      set(schema,inter.path,null);
+                                                      console.warn(`Interface for method [${_path}] is missing a property  [${inter.name}.${inter.path}]`)
+                                                   }else
+                                                      set(schema,inter.path,get(value,inter.path))
+                                            }
+
+                                        })
+                                }
+                                console.log(schema)
+                                complete(schema || value);
+                            }catch (e) {
+                                exception({
+                                    path    : _path,
+                                    message : e.message,
+                                    name    : e.name,
+                                    code    : e.code
+                                });
+                            }
+                        })
+                    }
+                })
+            }catch (e) {
+                new FileControllerException('Service controller could not loaded:',file)
+            }
+        }
+
+        next();
+        return this;
+    }
     test(){
         // run tests
         let tests = [];
@@ -441,6 +468,9 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             console.info(chalk.bold(`automated tests [${chalk.cyan(tests.length)}]`));
             (<any>console).info(`creating virtual client`);
             setTimeout(() => {
+                if(this.#io.ip)
+                    this.#io.port = [(this.#io.protocol || 'http://') , this.#io.ip , ':' , this.#io.port].join('')
+
                 let client = new Client();
                     client.connect(this.#io.port).then(async (context) => {
                         console.info(chalk.bold('virtual client is ready'));
