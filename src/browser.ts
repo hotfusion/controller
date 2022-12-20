@@ -1,4 +1,5 @@
 import { Vue as IVue, createDecorator } from "vue-class-component";
+
 import { Client } from "./classes/client";
 
 let client,callbacks:any = {
@@ -60,6 +61,6 @@ export class HF {
 }
 
 export const Vue = IVue;
-export {Options as options,Options} from "vue-class-component";
+export { Options as options,Options} from "vue-class-component";
+export { Watch,Component } from 'vue-property-decorator'
 export { Client } from './classes/client';
-export * as UI from "@hotfusion/ui"

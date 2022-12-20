@@ -15,7 +15,8 @@ import {IO}     from "./io";
 import {utils} from "./utils";
 import {Console} from "./console";
 
-new Console(true);
+// @TODO: need to move this Console class to cli
+new Console(false);
 
 export class Host extends EventEmitter {
     readonly #express
