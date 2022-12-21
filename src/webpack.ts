@@ -122,74 +122,69 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
         let bar = (<any>console).progress({
             scope : chalk.bold(filename)
         });
-        let num = 0
+
+        let cachedFile;
+        compiler.bar = new ProgressPlugin({
+            profile: true,
+            async handler(percentage){
+                if(!bar._init){
+                    console.clear();
+                    bar._init = true;
+                    bar.start(100, 0);
+                }
+                bar.update(percentage*100,{
+                    filename : ''
+                });
+                if((Math.round(percentage*100) === 100)){
+                    bar.stop();
+                    bar._init = false;
+                }
+            }
+        }).apply(compiler);
+
+
+        let to;
         compiler.watch({}, (err, stats) => {
             // deal with errors
             if (err || stats.hasErrors())
                 return <any>exception(stats, err)
 
-            let filename     = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift()
+            bar.start(100, 0);
+            let filename     = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift();
             let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
             let lastModified = fs.statSync(filePath).mtimeMs;
             let content      = Object.keys(stats.compilation.assets).map(filename => {
                 return fs.readFileSync(path.resolve(__dirname,`./_.cache/${filename}`)).toString()
             }).join('\n');
 
-            num++;
-            if(compiler.__init) {
-                if(!compiler.bar)
-                    compiler.bar = new ProgressPlugin({
-                        profile: true,
-                        async handler(percentage){
-                            if(!bar._init){
-                                console.clear();
-                                bar._init = true;
-                                bar.start(100, 0);
-                            }
-                            bar.update(percentage*100,{
-                                filename : ''
-                            });
-                            if((Math.round(percentage*100) === 100)){
-                                setTimeout(async () => {
-                                    console.clear();
-                                    _config?.watch?.({
-                                        entry        : _config.entry,
-                                        content      : content,
-                                        lastModified : lastModified,
-                                        stats        : stats
-                                    });
+            clearTimeout(to);
+            setTimeout(() => {
+                console.clear();
+                console.info(chalk.green(`Files have been updated by webpack:`));
+                let entry = path.resolve(__dirname,`./_.cache/${filename}`);
+                if(!fs.existsSync(entry))
+                    return ;
 
-                                    console.info(`Files were updated by webpack:`);
+                if(!changedFiles.find(x => path.normalize(_config.entry) === x || path.normalize(_config.entry) === x.path))
+                    changedFiles.unshift({
+                        label : 'Entry',
+                        path  : path.normalize(_config.entry),
+                        size  : fs.statSync(entry).size
+                    });
 
-                                    let entry = path.resolve(__dirname,`./_.cache/${filename}`);
-                                    if(!changedFiles.find(x => path.normalize(_config.entry) === x || path.normalize(_config.entry) === x.path))
-                                        changedFiles.unshift({
-                                            label : 'Entry',
-                                            path  : path.normalize(_config.entry),
-                                            size  : fs.statSync(entry).size
-                                        });
+                changedFiles.forEach(x => {
+                    if((typeof x === 'string' && fs.existsSync(x)) ||  (x.path && fs.existsSync(x.path))) {
+                        console.info(`[${chalk.cyan(utils.$convertBytes( x.size || fs.statSync(x.path || x).size))}] ${chalk.green( x.path || x)} - ${chalk.gray(x.label || 'File ')}`)
+                    }
+                })
+            },200);
 
-                                    changedFiles.forEach(x => {
-                                        if((typeof x === 'string' && fs.existsSync(x)) ||  (x.path && fs.existsSync(x.path))) {
-                                            console.info(`[${chalk.cyan(utils.$convertBytes( x.size || fs.statSync(x.path || x).size))}] ${chalk.green( x.path || x)} - ${chalk.gray(x.label || 'File ')}`)
-                                        }
-                                    })
-
-                                },1000)
-                                bar.stop();
-                                bar._init = false;
-                            }
-                        }
-                    }).apply(compiler) || true;
-
-                bar.start(100, 0);
-            }else
-                _config?.watch?.({
-                    entry: _config.entry,
-                    content: content,
-                    lastModified: lastModified,
-                    stats: stats
-                });
+            _config?.watch?.({
+                entry: _config.entry,
+                content: content,
+                lastModified: lastModified,
+                stats: stats
+            });
 
             compiler.__init = true;
         });
@@ -200,6 +195,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
             let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
             let lastModified = fs.statSync(filePath)?.mtimeMs;
             let content      = fs.readFileSync(filePath)?.toString?.() || `File was not found:${filename}`;
+
 
             try {
                 fs.unlinkSync(filePath);

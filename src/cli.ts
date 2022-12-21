@@ -3,9 +3,10 @@ import {CDN, Controller, Transformer, Session, utils, Host} from "./index";
 import {Webpack} from "./webpack";
 import {Analytics} from "./middlewares/analytics";
 import {resolve} from "path";
+
 import {VueLoaderPlugin} from "vue-loader";
 import * as keypress from 'keypress';
-
+const inquirer = require('inquirer');
 const argv = require('minimist')(
     process.argv.slice(2)
 );
@@ -22,6 +23,23 @@ process.stdin.on('keypress', function (ch, key) {
 
     if (key && key.ctrl && key.name == 'c') {
         //process.stdin.pause();
+
+        inquirer
+            .prompt([
+                {
+                    name   : "shutdown",
+                    type   : "list",
+                    message: "Are you sure you want to shutdown current service?",
+                    choices: ["Yes", "No"],
+                },
+            ])
+            .then((answer) => {
+                if(answer.shutdown === 'Yes') {
+                    console.clear();
+                    console.info('Bye Bye!')
+                    process.exit()
+                }
+            })
     }
 });
 
