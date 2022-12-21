@@ -396,7 +396,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 );
                                 // return interface schema
                                 let schema;
-                                if(method.interface){
+                                if(method.interface.name){
                                     schema = method.interface.isArray?[]:{};
                                     // filter interfaces
                                     let interfaces = Object.keys(this.#interfaces).map(x => this.#interfaces[x].filter(y => y.name === method.interface.name)).flat();
@@ -433,7 +433,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
                                             })
                                 }
-                                //console.log(schema)
                                 complete(schema || value);
                             }catch (e) {
                                 exception({
