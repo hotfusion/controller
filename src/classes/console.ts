@@ -66,8 +66,8 @@ export class Console {
         },30);
 
         console.clear    = () => {
-            //if(!this.disabled)
-                //this.sync.push({scope:'clear'})
+            if(!this.disabled)
+                this.sync.push({scope:'clear'})
         };
         console.progress = this.progress.bind(this)
 

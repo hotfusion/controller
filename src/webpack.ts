@@ -107,7 +107,11 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
         return console.error({'unknown' : 'undefined error'});
     };
     let compiler  = webpack(config);
+    let isWatching = false;
     let watch     = () => {
+        if(isWatching) return;
+
+        isWatching = true;
         let changedFiles = []
         compiler.hooks.watchRun.tap('WatchRun', (comp) => {
             if(!compiler.__init || !comp.modifiedFiles) return;
@@ -118,11 +122,11 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
         let bar = (<any>console).progress({
             scope : chalk.bold(filename)
         });
+        let num = 0
         compiler.watch({}, (err, stats) => {
             // deal with errors
-            if (err || stats.hasErrors()) {
+            if (err || stats.hasErrors())
                 return <any>exception(stats, err)
-            }
 
             let filename     = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift()
             let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
@@ -131,7 +135,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                 return fs.readFileSync(path.resolve(__dirname,`./_.cache/${filename}`)).toString()
             }).join('\n');
 
-
+            num++;
             if(compiler.__init) {
                 if(!compiler.bar)
                     compiler.bar = new ProgressPlugin({
@@ -176,23 +180,23 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                                 bar._init = false;
                             }
                         }
-                    }).apply(compiler);
+                    }).apply(compiler) || true;
 
                 bar.start(100, 0);
-            }else {
+            }else
                 _config?.watch?.({
                     entry: _config.entry,
                     content: content,
                     lastModified: lastModified,
                     stats: stats
                 });
-            }
+
             compiler.__init = true;
         });
     }
     return new Promise((x,f) => {
         compiler.run((err, stats) => {
-            filename = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift()
+            filename         = Object.keys(stats.compilation.assets).filter(x => x.startsWith('default.')).shift();
             let filePath     = path.resolve(__dirname,`./_.cache/${filename}`);
             let lastModified = fs.statSync(filePath)?.mtimeMs;
             let content      = fs.readFileSync(filePath)?.toString?.() || `File was not found:${filename}`;
@@ -200,13 +204,13 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
             try {
                 fs.unlinkSync(filePath);
             } catch (e) {
-                console.error(e.message)
+                console.error(e.message);
             }
 
             // deal with errors
             if (err || stats.hasErrors()) {
-                exception(stats,err)
-                return f({'Webpack Exception' : 'thrown an error by webpack!'})
+                exception(stats,err);
+                return f({'Webpack Exception' : 'thrown an error by webpack!'});
             }
 
             if(_config?.watch)
@@ -218,7 +222,6 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
                 lastModified : lastModified,
                 stats        : stats
             });
-
         });
     })
 }
