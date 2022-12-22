@@ -13,6 +13,13 @@ export class Client extends EventEmitter {
     constructor(options  = {}) {
         super();
         this.#options = options;
+        /* one of the annoying thing with private members is that the scope
+           can be updated by another class and calling private member from
+           this class will throw an error.
+           To fix it, bind all methods with current cass scope */
+
+           this.transaction = this.transaction.bind(this);
+           this.connect     = this.connect.bind(this)
     }
     update(options = {}){
         Object.assign(this.#options,options)
@@ -54,9 +61,9 @@ export class Client extends EventEmitter {
                 this.emit('reconnect', event);
             }
         );
+
         return await new Promise(x => {
                 this.#connection.on('handshake', (context:ServiceContext) => {
-                    //if(Object.keys(context).)
                     this.emit('handshake', context || {});
                     x(context || {})
                 }

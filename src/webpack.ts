@@ -86,6 +86,9 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
         },
          resolveLoader : {
             modules    : resolves
+        },
+        watchOptions: {
+            poll: 3000, // Check for changes every second
         }
     };
     let exception = (stats,err) => {
