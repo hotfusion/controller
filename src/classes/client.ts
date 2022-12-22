@@ -16,7 +16,8 @@ export class Client extends EventEmitter {
         /* one of the annoying thing with private members is that the scope
            can be updated by another class and calling private member from
            this class will throw an error.
-           To fix it, bind all methods with current cass scope */
+
+           @todo: fix it, bind all methods with current cass scope */
 
            this.transaction = this.transaction.bind(this);
            this.connect     = this.connect.bind(this)
@@ -35,6 +36,7 @@ export class Client extends EventEmitter {
             },this.#options)
         );
 
+        /* @todo create types for each event */
         this.#connection.on('disconnect', (event) => {
                 this.emit('disconnect', event);
             }
@@ -63,11 +65,11 @@ export class Client extends EventEmitter {
         );
 
         return await new Promise(x => {
-                this.#connection.on('handshake', (context:ServiceContext) => {
+            /* @todo handshake should have timeout */
+            this.#connection.on('handshake', (context:ServiceContext) => {
                     this.emit('handshake', context || {});
                     x(context || {})
-                }
-            );
+            });
         })
     }
     transaction(ChannelName:string,context:ParsedJSON,timeout?:number){
