@@ -2,6 +2,10 @@ declare type ParsedJSON = object
 declare type ICallBack = (request,respond, next:Function) => void
 declare type HTTPServer = any
 declare type SocketIoServer = any
+declare type ClassName = string
+declare type MethodName = string
+declare type PropertyName = string;
+
 declare interface MiddleWareInterface {
     use<HTTPRequest, HTTPRespond, Socket>(request : HTTPRequest | Socket,respond:HTTPRespond | Function,next:Function|undefined):this
     install(HTTPServer:any,SocketIoServer:any):Promis<this>
@@ -40,7 +44,8 @@ declare interface ControllerFile {
             _gateways
         }
     } | any
-    methods : {
+    path         : string
+    methods     ?: {
         [key:string]:{
             params        : {name: string, default: any | undefined, types: string[] }[]
             accessibility : 'private' | 'public' | 'protected'
@@ -51,7 +56,20 @@ declare interface ControllerFile {
                 isPromise:boolean
             }
         }
-    },
-    path    : string
-    error  ?: any
+    }
+    error       ?: any
+    observables ?: {
+        [key:ClassName] : {
+            [key:PropertyName] : {
+                static   : boolean
+                accessibility : 'protected' | 'public'
+            }
+        }
+    }
+}
+
+interface IObservableEvent {
+    className    : string
+    propertyName : string
+    update       : any
 }

@@ -35,7 +35,6 @@ export class Client extends EventEmitter {
                 reconnection : false
             },this.#options)
         );
-
         /* @todo create types for each event */
         this.#connection.on('disconnect', (event) => {
                 this.emit('disconnect', event);
@@ -67,8 +66,11 @@ export class Client extends EventEmitter {
         return await new Promise(x => {
             /* @todo handshake should have timeout */
             this.#connection.on('handshake', (context:ServiceContext) => {
-                    this.emit('handshake', context || {});
-                    x(context || {})
+                this.emit('handshake', context || {});
+                this.#connection.on('observable', (observable) => {
+                        this.emit('observable', observable);
+                });
+                x(context || {});
             });
         })
     }

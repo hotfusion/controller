@@ -5,30 +5,10 @@ import { Client } from "./classes/client";
 let client,callbacks:any = {
     connect : []
 };
+
+const observables = {}
 export class HF {
     static client:any  = {
-        connect : (port, options) => {
-            if(!client && (typeof port === "number" || typeof port === "string")) {
-                client = new Client();
-                client.update(options);
-
-                client.on('handshake', (e) => {
-                    if(!client.__connected) {
-                        client.__connected = true;
-                        callbacks.connect.forEach(origin => origin(client));
-                    }else
-                        callbacks?.reconnect?.forEach?.(origin => origin(client))
-                });
-                client.on('disconnect', (e) => {
-                    callbacks?.disconnect?.forEach?.(origin => origin(client))
-                });
-                client.on('exception', (e) => {
-                    callbacks?.exception?.forEach?.(origin => origin(client))
-                });
-
-                client.connect(port);
-            }
-        },
         on : createDecorator(function(options:any, key)  {
             options.mixins = [...(options.mixins || []),{
                 beforeMount(){
@@ -49,6 +29,34 @@ export class HF {
                 }
             }]
         }),
+        connect : (port, options) => {
+            if(!client && (typeof port === "number" || typeof port === "string")) {
+                client = new Client();
+                client.update(options);
+
+                client.on('handshake', (e) => {
+                    if(!client.__connected) {
+                        client.__connected = true;
+                        client.on('observable',(O:IObservableEvent) => {
+                            Object.keys(observables).forEach(className => {
+                                if(O.className === className)
+                                    observables[className]?.[O.propertyName]?.(JSON.parse(O.update));
+                            })
+                        })
+                        callbacks.connect.forEach(origin => origin(client));
+                    }else
+                        callbacks?.reconnect?.forEach?.(origin => origin(client))
+                });
+                client.on('disconnect', (e) => {
+                    callbacks?.disconnect?.forEach?.(origin => origin(client))
+                });
+                client.on('exception', (e) => {
+                    callbacks?.exception?.forEach?.(origin => origin(client))
+                });
+
+                client.connect(port);
+            }
+        },
         transaction (path:string){
             return createDecorator(function(options:any, key)  {
                 let origin = options.methods[key];
@@ -57,6 +65,17 @@ export class HF {
                 }
             })
         }
+    }
+    static observe(className){
+        return createDecorator(function(options:any, key)  {
+            options.mixins = [...(options.mixins || []),{
+                beforeMount(){
+                    if(!observables[className])
+                        observables[className] = {};
+                    observables[className][key] = this[key];
+                }
+            }]
+        })
     }
 }
 

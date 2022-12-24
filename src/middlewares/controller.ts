@@ -11,6 +11,7 @@ import {get,set} from 'lodash';
 const chalk = require('chalk');
 const clearModule = require('clear-module');
 import {FirewallExceptions,TypeException,FileControllerException} from "../exceptions";
+import { Observable } from 'object-observer';
 
 class Helper {
    static getAllInterfaces(cwd){
@@ -71,12 +72,11 @@ class Helper {
     }
 }
 
-
 export class Controller extends MiddlewareFactory implements MiddleWareInterface {
-    #files:ControllerFile[] = []
     readonly #source
     readonly #cwd
     readonly #interfaces = {}
+    #files:ControllerFile[] = []
     #http
     #io
     constructor({source}) {
@@ -90,15 +90,19 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
     async install(http: HTTPServer, io: SocketIoServer): Promise<this> {
         this.#http = http;
         this.#io   = io;
-        let getFiles = (bar?:any):ControllerFile[]  =>{
+        let getFiles = (bar?:any):ControllerFile[]  => {
             let files = glob.sync([this.#source,'!node_modules'], { dot: true,cwd:this.#cwd }).map(x => path.resolve(this.#cwd,x));
             return files.map((x:string) => {
                 try{
-                    clearModule(x.replace('.ts','.js'));
-                    let module  = require(x.replace('.ts','.js')).default
-                    let methods = {}
-                    let code    = fs.readFileSync(x).toString();
-                    let ast     = parser.parse(code,{
+                    clearModule(
+                        x.replace('.ts','.js')
+                    );
+
+                    let module      = require(x.replace('.ts','.js')).default
+                    let methods     = {};
+                    let observables = {};
+                    let code        = fs.readFileSync(x).toString();
+                    let ast         = parser.parse(code,{
                         allowImportExportEverywhere:true,
                         plugins: ["decorators","typescript"]
                     });
@@ -238,23 +242,35 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                             };
                         }
                     }
-
                     traverse(ast, {
                         Function(path){
                             parse(path)
+                        },
+                        ClassProperty(path){
+                            if(path.node.accessibility === 'protected' || path.node.accessibility === 'public'){
+                                if(!observables?.[module.name])
+                                    observables[module.name] = {};
+
+                                observables[module.name][path.node.key.name] = {
+                                    accessibility : path.node.accessibility,
+                                    static        : path.node.static
+                                }
+                            }
                         }
                     });
                     return {
-                        methods : methods,
-                        module  : module,
-                        path    : x
+                        methods     : methods,
+                        module      : module,
+                        path        : x,
+                        observables : observables
                     };
                 }catch (e) {
                     return {
                         methods : {},
                         module  : false,
                         path    : x,
-                        error   : e
+                        error   : e,
+                        observables : {}
                     }
                 }
             });
@@ -291,7 +307,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     setTimeout(x => {
                         bar.stop();
                         console.info(`${chalk.magenta(`controller ${this.#files.length?'updated':'installed'} :`)} ${chalk.bold(file.module.name)} - [./${utils.$toLinuxPath(file.path).split('/').pop()}]`);
-                        this.test();
+                        this.testers();
                     },1000 )
                 },2000);
 
@@ -301,7 +317,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             });
         });
 
-        http.on('mounted', () => this.test());
+        http.on('mounted', () => this.testers());
         return this;
     }
     use(socket,next){
@@ -313,6 +329,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
             try {
                 // mount the class module and pass the user class
                 controller = new file.module(new User(socket));
+
                 // do we have TypeClass?
                 if(_classTypes)
                    _classTypes = new _classTypes();
@@ -322,7 +339,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                     return this.#interfaces[filename]
                 });
 
-                // install all methods in the file
+                // install methods from the file
                 Object.keys(file.methods).forEach(_path => {
                     let method = file.methods[_path];
                     if(method.accessibility === 'protected' || method.accessibility === 'public'){
@@ -445,6 +462,27 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                         })
                     }
                 })
+
+                // install observable properties from the file
+                Object.keys(file.observables).forEach(className => {
+                    Object.keys(file.observables[className]).forEach((propertyName) => {
+                        if(file.module.name !== className)
+                            return ;
+
+                        controller[propertyName] = Observable.from(controller[propertyName]);
+                        Observable.observe(controller[propertyName] , changes => {
+                            changes.forEach(change => {
+                                socket.emit('observable', <IObservableEvent>{
+                                    className    : className,
+                                    propertyName : propertyName,
+                                    update       : JSON.stringify(controller[propertyName])
+                                });
+                            });
+                        });
+
+                    });
+
+                });
             }catch (e) {
                 new FileControllerException('Service controller could not loaded:',file)
             }
@@ -453,7 +491,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         next();
         return this;
     }
-    test(){
+    testers(){
         // run tests
         let tests = [];
         let files = this.#files.filter(x => x.module);
