@@ -10,6 +10,21 @@ import MiddlewareFactory from "./index";
 import {get,set} from 'lodash';
 const chalk = require('chalk');
 const clearModule = require('clear-module');
+let loop = require('deep-for-each')
+
+let Interface = (obj,paths) => {
+    let object = {}
+    paths.forEach((x,i) => {
+        let _loc = [];
+        loop(obj, (value, key, subject, path) => {
+            if(typeof value !== 'object' && paths.find(x => x === path.replace(/(\[.*?\])/g, '')) && value)
+                set(object,path,value);
+        })
+    });
+
+    return object
+}
+
 import {FirewallExceptions,TypeException,FileControllerException} from "../exceptions";
 import { Observable } from 'object-observer';
 
@@ -414,41 +429,11 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 // return interface schema
                                 let schema;
                                 if(method.interface.name){
-                                    schema = method.interface.isArray?[]:{};
-                                    // filter interfaces
                                     let interfaces = Object.keys(this.#interfaces).map(x => this.#interfaces[x].filter(y => y.name === method.interface.name)).flat();
-                                        interfaces.forEach(x => set(schema,x.path.split('.'),{}));
-
-                                        if(method.interface.isArray && value.map){
-                                            if(method.interface.isArray ){
-                                                value.forEach((x,i) => {
-                                                    let obj = {}
-                                                    interfaces.forEach(inter => {
-                                                        if (get(x, inter.path) === undefined && inter.types[0].required) {
-                                                            console.warn(`method [${_path}] returns a context<${inter.name}> but its missing a property value [${inter.path}] in array collection at index [${i}]`)
-                                                            set(obj, inter.path, null)
-                                                        } else {
-                                                            set(obj, inter.path, get(x, inter.path) || null)
-                                                        }
-                                                    })
-                                                    schema.push(obj)
-                                                })
-                                            }
-                                        }else if (method.interface.isArray && !value.map)
-                                            console.warn(`Interface for method [${_path}] defined as array but returns non array context.`)
-                                        else
-                                            interfaces.forEach(inter => {
-                                                if(method.interface.isArray && !value.map){
-                                                    console.warn(`Interface for method [${_path}] defined as array but returns non array context.`)
-                                                }else {
-                                                    if(get(value,inter.path) === undefined && inter.types[0].required){
-                                                        set(schema,inter.path,null);
-                                                        console.warn(`method [${_path}] returns a context which is missing a property value [${inter.name}.${inter.path}]`)
-                                                    }else
-                                                        set(schema,inter.path,get(value,inter.path) || null)
-                                                }
-
-                                            })
+                                    if (method.interface.isArray && !value.map)
+                                        console.warn(`Interface for method [${_path}] defined as array but returns non array context.`)
+                                    else
+                                        schema = Interface(value,interfaces.map(x => x.path));
                                 }
                                 complete(schema || value);
                             }catch (e) {

@@ -51,7 +51,8 @@
     "node-os-utils": "^1.3.7",
     "vue-property-decorator": "^9.1.2",
     "inquirer": "^8.0.0",
-    "object-observer": "^5.1.6"
+    "object-observer": "^5.1.6",
+    "deep-for-each": "^3.0.0"
   },
   "scripts": {
     "cli-server" : "node ./dist/server.js",
