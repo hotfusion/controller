@@ -8,9 +8,10 @@ import {User} from "../classes/user";
 import {Client} from "../classes/client";
 import MiddlewareFactory from "./index";
 import {get,set} from 'lodash';
-const chalk = require('chalk');
+
+const chalk       = require('chalk');
 const clearModule = require('clear-module');
-let loop = require('deep-for-each')
+const loop        = require('deep-for-each')
 
 let Interface = (obj,paths) => {
     let object = {}
