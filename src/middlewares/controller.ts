@@ -22,8 +22,7 @@ let Interface = (obj,paths) => {
                 set(object,path,value);
         })
     });
-
-    return object
+    return object;
 }
 
 import {FirewallExceptions,TypeException,FileControllerException} from "../exceptions";
@@ -326,7 +325,6 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                         this.testers();
                     },1000 )
                 },2000);
-
                 tp = setTimeout(() => {
                     bar.update(40)
                 },100)
@@ -341,7 +339,12 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         for(let i = 0; i < files.length; i++){
             let file:ControllerFile = files[i];
             let {_types, _classTypes ,_firewalls ,_alias,_gateways} = file.module.prototype;
+
             let controller;
+
+            socket.on('disconnect', () => {
+                controller = undefined;
+            })
             try {
                 // mount the class module and pass the user class
                 controller = new file.module(new User(socket));
