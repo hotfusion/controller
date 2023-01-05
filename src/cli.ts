@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import {Controller, Transformer, Session, utils, Host} from "./index";
 import {Webpack}   from "./webpack";
-import {Analytics} from "./middlewares/analytics";
+//import {Analytics} from "./middlewares/analytics";
 import {resolve}   from "path";
-
+import {Console} from "./classes/console";
+new Console(true);
 import {VueLoaderPlugin} from 'vue-loader';
 import * as keypress from 'keypress';
 const inquirer = require('inquirer');
@@ -46,10 +47,14 @@ if(argv.public?.startsWith('./'))
 if(argv.public?.startsWith('/'))
     argv.public =  resolve(process.cwd(),'.' + argv.public)
 
+if(argv.services?.startsWith('./'))
+    argv.services =  resolve(process.cwd(),argv.services)
+
+console.log(argv.services)
 const cwd = argv.public || process.cwd();
 // controller
 const controller     = new Controller({
-    source : resolve(cwd,'./**/*.controller.ts')
+    source : resolve(argv.services || cwd, './**/*.controller.ts')
 });
 
 // default transformer
@@ -116,11 +121,11 @@ const VueTransformer = new Transformer({
         return File;
     }
 })
-let analytics = new Analytics();
+//let analytics = new Analytics();
 
 let host = new Host();
 host.use(controller.use)
-    .use(analytics.use)
+    //.use(analytics.use)
     .use(new Session().use)
     .use(VueTransformer.use)
     .use(transformer.use)
@@ -128,16 +133,31 @@ host.use(controller.use)
         next();
     });
 
+const bar = (<any>console).progress({
+    scope : 'middlewares'
+});
+
+host.on('install.started', (middlewares) => {
+    bar.start(middlewares.length, 0)
+});
+host.on('install.mounting', (middleware) => {
+    //console.error(middleware);
+});
+host.on('install.mounted', ({index,module}) => {
+    bar.update(index + 1,{
+        filename : ''
+    });
+});
+host.on('install.completed', (stats) => {
+    bar.stop()
+});
+
 host.on('client', ({connect,exception}) => {
     connect({});
 });
 
 host.on('exception', (exception) => {
     console.error(exception);
-});
-
-host.on('mounted' , () => {
-
 });
 
 host.use('/', cwd);

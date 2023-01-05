@@ -31,7 +31,7 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
         },
          resolve  : {
             alias      : {...(_config?.alias?.() || _config?.alias || {}),
-                "HF" : path.resolve(__dirname,'./browser.js'),
+                //"HF" : path.resolve(__dirname,'./browser.js'),
                 "@hotfusion/service" : __dirname
             },
             modules    : resolves,
@@ -39,10 +39,10 @@ export const Webpack = function(_config:{cwd:string,entry:string,output:string,p
         },
          plugins  : [
             ...(_config?.plugins?.() || []),
-            new webpack.NormalModuleReplacementPlugin(
+            /*new webpack.NormalModuleReplacementPlugin(
                 /@hotfusion\/service/,
                 __dirname + '/browser.js'
-            )
+            )*/
         ],
          module   : {
             rules : [{

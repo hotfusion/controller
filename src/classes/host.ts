@@ -12,11 +12,6 @@ const os = require('os')
 import * as EventEmitter from 'eventemitter3';
 import {Server} from "socket.io";
 import {IO}     from "./io";
-import {utils} from "./utils";
-import {Console} from "./console";
-
-// @TODO: need to move this Console class to cli
-new Console(false);
 
 export class Host extends EventEmitter {
     readonly #express
@@ -118,17 +113,17 @@ export class Host extends EventEmitter {
         // start the HTTP server
         let middles = this.#middles;
         // install all middlewares
-        const bar = (<any>console).progress({
+        /*const bar = (<any>console).progress({
             scope : 'middlewares'
         })
 
-        bar.start(middles.length, 0);
-
+        bar.start(middles.length, 0);*/
+        this.emit('install.started', middles);
         for(let i = 0; i < middles.length; i++){
-            bar.update(i+1,{
+            /*bar.update(i+1,{
                 filename : ''
-            });
-
+            });*/
+            this.emit('install.mounting', middles[i]);
             let {callback,dir} = middles[i];
             try{
                 this.#express.port     = this.#io.port     = port;
@@ -137,6 +132,10 @@ export class Host extends EventEmitter {
 
                 await (<any>callback)?.install?.(this.#express,this.#io);
                 await (<any>dir)?.install?.(this.#express,this.#io);
+                this.emit('install.mounted', {
+                    module : middles[i],
+                    index  : i
+                });
             }catch (e) {
                 console.error('middleware exception:',e);
             }
@@ -180,7 +179,7 @@ export class Host extends EventEmitter {
             }
 
         }
-        bar.stop();
+        this.emit('install.completed');
         this.#http.listen(port, ip,() => {
             console.info(chalk.greenBright('service is running at'),chalk.bold(ip + ':' + port));
             this.emit('mounted', this);

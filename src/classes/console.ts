@@ -69,7 +69,7 @@ export class Console {
             if(!this.disabled)
                 this.sync.push({scope:'clear'})
         };
-        console.progress = this.progress.bind(this)
+        global.console.progress = this.progress.bind(this)
 
     }
     parse(msg) {
