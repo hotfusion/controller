@@ -1,9 +1,6 @@
 import {utils} from "./classes/utils";
 const chalk = require('chalk')
-const ProgressPlugin = require('webpack/lib/ProgressPlugin');
-const { VueLoaderPlugin } = require("vue-loader");
-const path = require('path'), TerserPlugin = require('terser-webpack-plugin'), webpack = require('webpack'), fs = require('fs'), htmlWebpackPlugin = require("html-webpack-plugin");
-const TsconfigPathsPlugin = require('tsconfig-paths-webpack-plugin');
+const ProgressPlugin = require('webpack/lib/ProgressPlugin'),path = require('path'), TerserPlugin = require('terser-webpack-plugin'), webpack = require('webpack'), fs = require('fs'), htmlWebpackPlugin = require("html-webpack-plugin");
 const resolves = [
     path.resolve(__dirname, '../node_modules')
 ];

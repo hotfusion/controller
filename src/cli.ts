@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-import {CDN, Controller, Transformer, Session, utils, Host} from "./index";
-import {Webpack} from "./webpack";
+import {Controller, Transformer, Session, utils, Host} from "./index";
+import {Webpack}   from "./webpack";
 import {Analytics} from "./middlewares/analytics";
-import {resolve} from "path";
+import {resolve}   from "path";
 
-import {VueLoaderPlugin} from "vue-loader";
+import {VueLoaderPlugin} from 'vue-loader';
 import * as keypress from 'keypress';
 const inquirer = require('inquirer');
 const argv = require('minimist')(
@@ -16,24 +16,20 @@ keypress(process.stdin);
 
 // listen for the "keypress" event
 process.stdin.on('keypress', function (ch, key) {
-    //console.log('got "keypress"', key);
+
     if (key && key.ctrl && key.name == 'x') {
         process.stdout.write('\x1Bc');
     }
 
     if (key && key.ctrl && key.name == 'c') {
         //process.stdin.pause();
-
         inquirer
-            .prompt([
-                {
-                    name   : "shutdown",
-                    type   : "list",
-                    message: "Are you sure you want to shutdown current service?",
-                    choices: ["Yes", "No"],
-                },
-            ])
-            .then((answer) => {
+            .prompt(<any>[{
+                    name    : "shutdown",
+                    type    : "list",
+                    message : "Are you sure you want to shutdown current service?",
+                    choices : ["Yes", "No"]
+            }]).then((answer) => {
                 if(answer.shutdown === 'Yes') {
                     console.clear();
                     console.info('Bye Bye!')
@@ -120,7 +116,8 @@ const VueTransformer = new Transformer({
         return File;
     }
 })
-let analytics = new Analytics()
+let analytics = new Analytics();
+
 let host = new Host();
 host.use(controller.use)
     .use(analytics.use)
