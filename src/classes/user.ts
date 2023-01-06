@@ -25,4 +25,10 @@ export class User {
         delete this.#socket.handshake.session[key];
         this.#socket.handshake.session.save();
     }
+    dispatch(name,context){
+        this.#socket.emit(['listener',name].join('.'),{
+            name    : name,
+            context : context || null
+        })
+    }
 }
