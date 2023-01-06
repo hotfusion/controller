@@ -495,22 +495,28 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
         if(tests.length) {
             console.info(chalk.bold(`automated tests [${chalk.cyan(tests.length)}]`));
             (<any>console).info(`creating virtual client`);
-            setTimeout(() => {
+            setTimeout(async () => {
                 if(this.#io.ip)
                     this.#io.port = [(this.#io.protocol || 'http://') , this.#io.ip , ':' , this.#io.port].join('')
 
-                let client = new Client();
-                    client.connect(this.#io.port).then(async (context) => {
-                        console.info(chalk.bold('virtual client is ready'));
-                        for(let i = 0 ; i < tests.length; i++){
-                            console.info(chalk.yellow(`controller:`),tests[i].className + '.' + tests[i].methodName, chalk.blueBright(JSON.stringify(tests[i].arguments[0])));
-                            try {
-                                console.info(chalk.cyanBright(`output:`),await client.transaction([tests[i].className,tests[i].methodName].join('.'),tests[i].arguments[0]));
-                            } catch (e) {
-                                console.error(e.errors)
-                            }
+                if(!global.Tester) {
+                    global.Tester = new Client();
+                    await global.Tester.connect(this.#io.port)
+                }
+
+                console.info(chalk.bold('virtual client is ready'));
+
+                setTimeout(async () => {
+                    for (let i = 0; i < tests.length; i++) {
+                        console.info(chalk.yellow(`controller:`), tests[i].className + '.' + tests[i].methodName, chalk.blueBright(JSON.stringify(tests[i].arguments[0])));
+                        try {
+                            console.info(chalk.cyanBright(`output:`), await global.Tester.transaction([tests[i].className, tests[i].methodName].join('.'), tests[i]?.arguments?.[0] || {}));
+                        } catch (e) {
+                            console.error(chalk.red(`exception:`),e?.errors || e)
                         }
-                    });
+                    }
+                },1000)
+
             },200);
         }
     }

@@ -1,15 +1,5 @@
 type ClassTypes = any
 
-
-interface FirewallContext {
-    meta():any
-    [key:string]:any
-}
-interface FirewallCallback {
-    complete:Function
-    exception:Function
-}
-
 export const type     = <key extends string, value extends object | any>(target,name,descriptor:TypedPropertyDescriptor<((key:string,value:object | any ) => any )>):TypedPropertyDescriptor<((key:string,value:object | any ) => any )> => {
     if(!target._types)
         target._types = [];
@@ -17,7 +7,6 @@ export const type     = <key extends string, value extends object | any>(target,
     target._types.push(name);
     return target;
 }
-
 export const firewall = function (target,name,descriptor:TypedPropertyDescriptor<any>):TypedPropertyDescriptor<(Context: FirewallContext,Callback:FirewallCallback) => any> {
     if(!target._firewalls)
         target._firewalls = [];
@@ -37,7 +26,7 @@ export const alias    = (name:string) => {
         return target
     }
 }
-export const gateway    = (url:string[] | string) => {
+export const gateway  = (url:string[] | string) => {
     return (target) => {
         if(!target.prototype._gateways)
             target.prototype._gateways = [];
@@ -55,8 +44,7 @@ export const types    = (_classTypes:ClassTypes) => {
         return target
     }
 }
-
-export const test = function (...Arguments)  {
+export const test     = function (...Arguments)  {
     return (target,name,descriptor) => {
         if(!target._tests)
             target._tests = [];

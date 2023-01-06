@@ -10,6 +10,10 @@ export class User {
     getSession(){
         return this.#socket.handshake.session
     }
+    setSession(obj){
+       Object.assign(this.#socket.handshake.session,obj);
+       this.#socket.handshake.session.save();
+    }
     set(key:string,value:any){
         this.#socket.handshake.session[key] = value;
         this.#socket.handshake.session.save();

@@ -73,3 +73,12 @@ interface IObservableEvent {
     propertyName : string
     update       : any
 }
+
+interface FirewallContext {
+    meta():any
+    [key:string]:any
+}
+interface FirewallCallback {
+    complete:Function
+    exception:Function
+}
