@@ -26,7 +26,7 @@ export class User {
         this.#socket.handshake.session.save();
     }
     dispatch(name,context){
-        this.#socket.emit(['listener',name].join('.'),{
+        this.#socket.emit('listener',{
             name    : name,
             context : context || null
         })
