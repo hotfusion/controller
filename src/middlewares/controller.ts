@@ -428,7 +428,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
 
                                 let value = await f.apply(
                                     controller,
-                                    [...Object.values(context),socket]
+                                    [...Object.values(context || {}),socket]
                                 );
                                 // return interface schema
                                 let schema;
@@ -441,6 +441,7 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 }
                                 complete(schema || value);
                             }catch (e) {
+                                console.error(e);
                                 exception({
                                     path    : _path,
                                     message : e.message,

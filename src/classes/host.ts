@@ -15,14 +15,18 @@ import {IO}     from "./io";
 
 export class Host extends EventEmitter {
     readonly #express
-    readonly #ssl
+    readonly #ssl: {key:any,cert:any}
     readonly #http
     readonly #io
     readonly #middles:{callback: ICallBack | string | string[], dir?:string | Function}[] = []
     readonly #getArguments = (V) => V.toString().match(/\((.*)\)/)[0].split(',')
-    constructor() {
+    constructor(ssl?:{key:any,cert:any}) {
         super();
-
+        if(ssl)
+            this.#ssl = {
+                key  : fs.readFileSync(ssl.key),
+                cert : fs.readFileSync(ssl.cert)
+            };
         // create express instance
         this.#express = express();
 

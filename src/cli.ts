@@ -123,7 +123,11 @@ const VueTransformer = new Transformer({
 })
 //let analytics = new Analytics();
 
-let host = new Host();
+let host = new Host(argv.ssl?{
+    key  : resolve(__dirname,'./assets/ssl/localhost.key'),
+    cert : resolve(__dirname,'./assets/ssl/localhost.cert')
+}:undefined);
+
 host.use(controller.use)
     //.use(analytics.use)
     .use(new Session().use)
