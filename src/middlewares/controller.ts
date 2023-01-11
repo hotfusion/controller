@@ -401,11 +401,11 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 method.params.forEach(x => {
                                         let value = context[x.name];
                                         if(!value)
-                                            throw new TypeException(`arguments passed to transaction [${_path}] missing property [${x.name}] `)
+                                            throw new TypeException(`arguments passed to transaction [${_path}] missing property [${x.name}] `,x.name)
 
                                         let types = x.types;
                                         if(types.length && !_types?.find && !_classTypes)
-                                            throw new TypeException(`Controller method [${_path}] => [${x.name}:${types.join(' | ')}] requires type validator - @type ${types.join(' | ')} - (key,value) => {}`)
+                                            throw new TypeException(`Controller method [${_path}] => [${x.name}:${types.join(' | ')}] requires type validator - @type ${types.join(' | ')} - (key,value) => {}`,x.name)
                                         else
                                             types.forEach(typeName => {
                                                 let evaluate:string = _classTypes[typeName]?typeName:_types?.find?.(y => y === typeName);
@@ -415,12 +415,12 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                                     evaluate = method?.declarations?.find?.(x => x.name === typeName)?.type
 
                                                 if(!evaluate)
-                                                    throw new TypeException(`Missing type validation [${typeName}] for ${_path} - ${x.name}`)
+                                                    throw new TypeException(`Missing type validation [${typeName}] for ${_path} - ${x.name}`,x.name)
                                                 else
                                                     try{
                                                         (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
                                                     }catch(e){
-                                                        throw new TypeException(e)
+                                                        throw new TypeException(e,x.name)
                                                     }
                                             })
                                     });
@@ -441,12 +441,13 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 }
                                 complete(schema || value);
                             }catch (e) {
-                                console.error(e);
+                                //console.error(e);
                                 exception({
                                     path    : _path,
                                     message : e.message,
                                     name    : e.name,
-                                    code    : e.code
+                                    code    : e.code,
+                                    field   : e.field
                                 });
                             }
                         })

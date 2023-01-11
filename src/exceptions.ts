@@ -12,8 +12,10 @@ export class FirewallExceptions extends Exception {
 }
 
 export class TypeException extends Exception{
-    constructor(...inputs:any) {
+    field:string
+    constructor(message,field) {
         super(arguments);
+        this.field = field;
         this.name = "TypeException"
     }
 }
