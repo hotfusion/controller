@@ -420,7 +420,10 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                                     try{
                                                         (_classTypes?.[evaluate] || controller[evaluate])(x.name,value);
                                                     }catch(e){
-                                                        throw new TypeException(e,x.name)
+                                                        let error:any = new TypeException(e.message);
+                                                            error.setField(x.name);
+
+                                                        throw error;
                                                     }
                                             })
                                     });
@@ -441,13 +444,14 @@ export class Controller extends MiddlewareFactory implements MiddleWareInterface
                                 }
                                 complete(schema || value);
                             }catch (e) {
-                                //console.error(e);
+                                console.error(e);
+
                                 exception({
                                     path    : _path,
                                     message : e.message,
                                     name    : e.name,
-                                    code    : e.code,
-                                    field   : e.field
+                                    code    : e.code  || false,
+                                    field   : e?.getField?.() || false
                                 });
                             }
                         })

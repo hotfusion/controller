@@ -12,11 +12,17 @@ export class FirewallExceptions extends Exception {
 }
 
 export class TypeException extends Exception{
-    field:string
-    constructor(message,field) {
+    #field:string
+    constructor(message,field?:string) {
         super(arguments);
-        this.field = field;
+        this.#field = field;
         this.name = "TypeException"
+    }
+    getField() {
+        return this.#field
+    }
+    setField( v ){
+        this.#field = v;
     }
 }
 
@@ -27,9 +33,9 @@ export class FileControllerException extends Exception {
     }
 }
 
-export class TypeError extends Error{
-    constructor(type,key,value) {
-        super(`[${key}] value [${value}] is not a type of [${type}]`);
+export class TypeError extends Error {
+    constructor(type,key,value,msg?:string) {
+        super(msg || `[${key}] value [${value}] is not a type of [${type}]`);
         this.name = "TypeError"
     }
 }
